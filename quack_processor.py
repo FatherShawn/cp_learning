@@ -135,8 +135,10 @@ def flatten_quack(source: IterableDataset, handler: Callable = wds.tariterators.
             try:
                 if len(data) == 0:
                     # Repopulate the data list.
-                    line = connection.readline().decode('UTF-8')
-                    datum = json.loads(line)
+                    line = connection.readline()
+                    if line == b'':
+                        raise StopIteration
+                    datum = json.loads(line.decode('UTF-8'))
                     try:
                         results = datum.pop('Results')
                     except KeyError:
@@ -158,10 +160,16 @@ def main(argv):
     dataset = wds.Processor(dataset, quack_file_expander)
     dataset = wds.Processor(dataset, flatten_quack)
 
-
-    for raw_result in dataset:
-        print(raw_result)
-    print('Finished without exception')
+    with open('/home/shawn/censored-planet/responses.txt', 'w') as responses:
+        count = 0
+        for raw_result in dataset:
+            try:
+                if len(raw_result['Received']) > 0:
+                    count += 1
+                # responses.write(raw_result['Received'])
+            except KeyError:
+                continue
+    print(count)
 
 if __name__ == '__main__':
     main(sys.argv)
