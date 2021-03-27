@@ -160,16 +160,25 @@ def main(argv):
     dataset = wds.Processor(dataset, quack_file_expander)
     dataset = wds.Processor(dataset, flatten_quack)
 
-    with open('/home/shawn/censored-planet/responses.txt', 'w') as responses:
-        count = 0
-        for raw_result in dataset:
-            try:
-                if len(raw_result['Received']) > 0:
-                    count += 1
-                # responses.write(raw_result['Received'])
-            except KeyError:
-                continue
-    print(count)
-
+    for raw_result in dataset:
+        ######
+        # The raw_result returns as a dictionary with this structure - vectorization notes for each field are given:
+        # 'Server': Encode to 4 element tensor,
+        # 'Keyword': TBD, label or metadata? 'www.worldcoalition.org',
+        # 'Retries': Encode to single element tensor,
+        # 'Blocked': Encode to single element tensor,
+        # 'FailSanity': False,
+        # 'StatefulBlock': Encode to single element tensor,
+        # 'Sent': Encode as tokens using XLM-R,
+        # 'Received': Encode as tokens using XLM-R. Not present in the data if Success is true - use `Sent` in that case?
+        # 'Success': Encode to single element tensor,
+        # 'Error': Encode as tokens using XLM-R,
+        # 'StartTime': Encode to single element tensor as unix timestamp,
+        # 'EndTime': Encode to single element tensor as unix timestamp
+        #
+        # Rearrange the order to put the variable length items at the end?  What's the proper way to prepare variable
+        # length data for a Variational Auto Encoder?
+        ######
+        pass
 if __name__ == '__main__':
     main(sys.argv)
