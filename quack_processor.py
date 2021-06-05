@@ -178,6 +178,11 @@ def main(argv):
         #
         # Rearrange the order to put the variable length items at the end?  What's the proper way to prepare variable
         # length data for a Variational Auto Encoder?
+        #
+        # Conclusion: Pytorch is explicitly designed for this issue:
+        # [dynamic computational graph](https://medium.com/intuitionmachine/pytorch-dynamic-computational-graphs-and-modular-deep-learning-7e7f89f18d1)
+        # So place the variable length data at the end of the input and process one input at a time.  It appears that
+        # only when processing multiple inputs as a batch does Pytorch need input data to be of a consistent size.
         ######
         pass
 
