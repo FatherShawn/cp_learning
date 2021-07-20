@@ -3,6 +3,8 @@ import tarfile
 import re
 import logging
 import torch
+import geoip2.database
+import geoip2.errors
 from blockpage import BlockpageMatcher
 from collections import defaultdict
 from dateutil.parser import isoparse
@@ -55,7 +57,7 @@ class Row(TypedDict):
     received_body: str
 
 class MetaTensor(TypedDict):
-    filename: str
+    metadata: str
     censored: int
     static_size: torch.Tensor
     variable_text: torch.Tensor
@@ -63,15 +65,11 @@ class MetaTensor(TypedDict):
 class CensoredPlanetFlatten(IterableDataset, Shorthands):
     """
     Although (Webdataset)[https://webdataset.github.io/webdataset/] may be able to handle all our pipeline needs,
-    my intention here is to take in the Censored Planet data and pre-preprocess it into Pytorch Tensors.
+    my intention here is to take in the Censored Planet Quack data and pre-preprocess it into Pytorch Tensors.
 
     The following are adapted from https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/flatten.py
-    - process_hyperquack
     - process_hyperquack_v1
     - process_hyperquack_v2
-    - process_satellite
-    - process_satellite_v1
-    - process_satellite_v2
     - extract_domain_from_sent_field
 
     Parameters
@@ -86,7 +84,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         The XLMR pretrained tokenizer.
     """
 
-    def __init__(self, urls: Union[str, list[str]], labeled=False) -> None:
+    def __init__(self, urls: Union[str, list[str]], labeled:bool = False, anomalies:bool = False) -> None:
         super().__init__()
 
         assert (
@@ -96,6 +94,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__shards = ShardList(urls)
         self.__blockpage_matcher = BlockpageMatcher()
         self.__labeled = labeled
+        self.__anomalies = anomalies
+        self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
         self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large')
         self.__xlmr.eval()
 
@@ -118,10 +118,16 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                             logging.warning('JSONDecodeError: %s\nFilename: %s\n%s\n', e, file_name,
                                             line)
                             return
-                        if 'Satellite' in file_name:
-                            yield from self.__process_satellite(file_name, scan)
+                        if 'Server' in scan:
+                            if self.__anomalies and not scan['Blocked']:
+                                continue
+                            yield from self.__process_hyperquack_v1(file_name, scan)
+                        elif 'vp' in scan:
+                            if self.__anomalies and not scan['anomaly']:
+                                continue
+                            yield from self.__process_hyperquack_v2(file_name, scan)
                         else:
-                            yield from self.__process_hyperquack(file_name, scan)
+                            raise Exception(f"Line with unknown hyperquack format:\n{scan}")
                     except StopIteration:
                         iterate_lines = False
                     except Exception as exn:
@@ -205,28 +211,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 yield sample
         except Exception as exn:
             handler(exn)
-
-    def __process_hyperquack(self, filename: str, scan: Dict) -> Iterator[MetaTensor]:
-        """
-        Process a line of Echo/Discard/HTTP/S data.
-
-        Parameters
-        ----------
-        filename: str
-            A filepath string
-        scan: dict
-            A loaded json object containing the parsed content of the line
-
-        Yields
-        -------
-        MetaTensor
-        """
-        if 'Server' in scan:
-            yield from self.__process_hyperquack_v1(filename, scan)
-        elif 'vp' in scan:
-            yield from self.__process_hyperquack_v2(filename, scan)
-        else:
-            raise Exception(f"Line with unknown hyperquack format:\n{scan}")
 
     def __process_hyperquack_v1(self, filename: str, scan: Dict) -> Iterator[MetaTensor]:
         """
@@ -388,24 +372,20 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         -------
         MetaTensor
         """
-        # ip: str
-        # domain: str
-        # anomaly: bool
-        # controls_failed: bool
-        # stateful_block: bool
-        # success: bool
-        # error: str
-        # start_time: float
-        # end_time: float
-        # censored: bool
-        # received_tls_version: int
-        # received_tls_cipher_suite: int
-        # received_tls_cert: str
-        # sent: str
-        # received_status: str
-        # received_headers: str
-        # received_body: str
-        filename_elements = (row['domain'], row['ip'], str(row['start_time']))
+        # See if we can look up a country from the ip.
+
+        try:
+            lookup = self.__ip2geo.country(row['ip'])
+            country = lookup.country.name
+        except geoip2.errors.AddressNotFoundError:
+            country = None
+
+        metadata = {
+            'domain': row['domain'],
+            'ip': row['ip'],
+            'location': country,
+            'timestamp': row['start_time']
+        }
         # Row keys with static length data.
         static_keys = ('success', 'anomaly', 'controls_failed', 'stateful_block', 'start_time', 'end_time', 'received_tls_version', 'received_tls_cipher_suite', 'received_tls_cert')
         # Row keys with variable length (text) data.
@@ -422,7 +402,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         for key in text_keys:
             concatenated += row[key]
         meta_tensor = MetaTensor(
-            filename='-'.join(filename_elements),
+            metadata=json.dumps(metadata),
             censored=row['censored'],
             static_size=torch.tensor(static_dimension),
             variable_text=self.__xlmr.encode(concatenated)
