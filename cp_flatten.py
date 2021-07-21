@@ -121,11 +121,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                         if 'Server' in scan:
                             if self.__anomalies and not scan['Blocked']:
                                 continue
-                            yield from self.__process_hyperquack_v1(file_name, scan)
+                            yield from self.__process_hyperquack_v1(scan)
                         elif 'vp' in scan:
                             if self.__anomalies and not scan['anomaly']:
                                 continue
-                            yield from self.__process_hyperquack_v2(file_name, scan)
+                            yield from self.__process_hyperquack_v2(scan)
                         else:
                             raise Exception(f"Line with unknown hyperquack format:\n{scan}")
                     except StopIteration:
@@ -136,7 +136,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
     # Utility iterators to keep __iter__ readable.
 
-    def __quack_tar_file_iterator(self, file_obj: BufferedReader, skip_meta: str = r".*\.txt$",
+    def __quack_tar_file_iterator(self, file_obj: BufferedReader,
                                   handler: Callable = tariterators.reraise_exception) -> Tuple[str, object]:
         """
         An adaptation of webdataset.tariterators.tar_file_expander that returns a stream to a file in which we are
@@ -167,14 +167,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 file_name = tarinfo.name
                 if file_name is None:
                     continue
-                if (
-                        "/" not in file_name
-                        and file_name.startswith(tariterators.meta_prefix)
-                        and file_name.endswith(tariterators.meta_suffix)
-                ):
-                    # skipping metadata for now
-                    continue
-                if skip_meta is not None and re.match(skip_meta, file_name):
+                if not 'results.json' in file_name:
+                    # Only interested in results.json
                     continue
                 yield file_name, stream.extractfile(tarinfo)
             except Exception as exn:
@@ -212,7 +206,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         except Exception as exn:
             handler(exn)
 
-    def __process_hyperquack_v1(self, filename: str, scan: Dict) -> Iterator[MetaTensor]:
+    def __process_hyperquack_v1(self, scan: Dict) -> Iterator[MetaTensor]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V1 format.
 
@@ -252,8 +246,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             matches_blockpage = 0
             if self.__labeled and result['Success'] and not scan['Blocked']:
                 matches_blockpage = -1
-            if self.__labeled and 'body' in received:
-                matches_blockpage = self.__blockpage_match(received['body'])
+            if self.__labeled and len(received_fields['received_body']) > 0:
+                matches_blockpage = self.__blockpage_match(received_fields['received_body'])
 
             # Process time strings into a unix timestamp.
             start = isoparse(result['StartTime'])
@@ -282,7 +276,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             meta_tensor = self.__process_row(row)
             yield  meta_tensor
 
-    def __process_hyperquack_v2(self, filename: str, scan: Dict) -> Iterator[MetaTensor]:
+    def __process_hyperquack_v2(self, scan: Dict) -> Iterator[MetaTensor]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V2 format.
 

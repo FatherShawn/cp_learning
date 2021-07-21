@@ -4,7 +4,7 @@ from cp_flatten import CensoredPlanetFlatten
 
 def main(argv):
     filename = argv[1]
-    dataset = CensoredPlanetFlatten(filename, True)
+    dataset = CensoredPlanetFlatten(filename, True, True)
 
     for item in dataset:
         pass
