@@ -117,7 +117,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                         except json.decoder.JSONDecodeError as e:
                             logging.warning('JSONDecodeError: %s\nFilename: %s\n%s\n', e, file_name,
                                             line)
-                            return
+                            continue
                         if 'Server' in scan:
                             if self.__anomalies and not scan['Blocked']:
                                 continue
