@@ -113,17 +113,25 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                             raise StopIteration
                         # Flatten the line.
                         try:
-                            scan = json.loads(line.decode('UTF-8'))
+                            scan = json.loads(line.decode('utf-8', errors='replace'))
                         except json.decoder.JSONDecodeError as e:
                             logging.warning('JSONDecodeError: %s\nFilename: %s\n%s\n', e, file_name,
                                             line)
                             continue
                         if 'Server' in scan:
-                            if self.__anomalies and not scan['Blocked']:
+                            try:
+                                blocked = scan['Blocked']
+                            except KeyError:
+                                blocked = False
+                            if self.__anomalies and not blocked:
                                 continue
                             yield from self.__process_hyperquack_v1(scan)
                         elif 'vp' in scan:
-                            if self.__anomalies and not scan['anomaly']:
+                            try:
+                                blocked = scan['anomaly']
+                            except KeyError:
+                                blocked = False
+                            if self.__anomalies and not blocked:
                                 continue
                             yield from self.__process_hyperquack_v2(scan)
                         else:
