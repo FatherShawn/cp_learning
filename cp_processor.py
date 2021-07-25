@@ -1,11 +1,12 @@
-import sys
 from cp_flatten import CensoredPlanetFlatten
 from webdataset.writer import ShardWriter
 
 
-def main(argv):
-    filename = argv[1]
-    dataset = CensoredPlanetFlatten(filename, True, True)
+def main():
+    urls = [
+
+    ]
+    dataset = CensoredPlanetFlatten(urls, True, True)
     writer = ShardWriter('preprocessed/quack-%i.tar')
 
     for item in dataset:
@@ -18,4 +19,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
