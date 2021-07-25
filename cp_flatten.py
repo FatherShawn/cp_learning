@@ -101,6 +101,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
     def __iter__(self) -> Iterator[torch.Tensor]:
         for quack_file in url_opener(self.__shards):
+            print(f'Processing {quack_file}:')
             for filestream in self.__quack_file_expander(quack_file):
                 file_name, connection = filestream
                 iterate_lines = True
@@ -115,8 +116,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                         try:
                             scan = json.loads(line.decode('utf-8', errors='replace'))
                         except json.decoder.JSONDecodeError as e:
-                            logging.warning('JSONDecodeError: %s\nFilename: %s\n%s\n', e, file_name,
-                                            line)
+                            logging.warning(f'JSONDecodeError: {e}\nFilename: {file_name}\n')
                             continue
                         if 'Server' in scan:
                             try:
