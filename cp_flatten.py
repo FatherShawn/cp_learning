@@ -5,6 +5,7 @@ import logging
 import torch
 import geoip2.database
 import geoip2.errors
+from torch.utils.data.dataset import T_co
 from blockpage import BlockpageMatcher
 from collections import defaultdict
 from dateutil.parser import isoparse
@@ -84,6 +85,13 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         The XLMR pretrained tokenizer.
     """
 
+    def __getitem__(self, index) -> T_co:
+        """
+        Required by the parent of IterableDataset but not useful in this context, and not implemented by any of the
+        Webdataset implementations of IterableDataset.
+        """
+        pass
+
     def __init__(self, urls: Union[str, list[str]], labeled:bool = False, anomalies:bool = False) -> None:
         super().__init__()
 
@@ -99,7 +107,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large')
         self.__xlmr.eval()
 
-    def __iter__(self) -> Iterator[torch.Tensor]:
+    def __iter__(self) -> Iterator[MetaTensor]:
         for quack_file in url_opener(self.__shards):
             current_url = quack_file['url']
             print(f'Processing {current_url}:')
