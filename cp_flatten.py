@@ -58,8 +58,7 @@ class Row(TypedDict):
     received_body: str
 
 class MetaTensor(TypedDict):
-    metadata: str
-    censored: int
+    metadata: dict
     static_size: torch.Tensor
     variable_text: torch.Tensor
 
@@ -258,13 +257,20 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             if 'Error' in result:
                 error = result['Error']
             received = result.get('Received', '')
-            received_fields = self.__parse_received_data(received)
-            # Calculate censorship if required
-            matches_blockpage = 0
-            if self.__labeled and result['Success'] and not scan['Blocked']:
-                matches_blockpage = -1
-            if self.__labeled and len(received_fields['received_body']) > 0:
-                matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+            try:
+                if self.__anomalies and result['Success']:
+                    # Not an anomaly.
+                    continue
+                received_fields = self.__parse_received_data(received)
+                # Calculate censorship if required
+                matches_blockpage = 0
+                if self.__labeled and result['Success'] and not scan['Blocked']:
+                    matches_blockpage = -1
+                elif self.__labeled and len(received_fields['received_body']) > 0:
+                    matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+            except KeyError:
+                # There's something out of spec with this item.
+                continue
 
             # Process time strings into a unix timestamp.
             start = isoparse(result['StartTime'])
@@ -322,14 +328,20 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             if 'error' in response:
                 error = response['error']
             received = response.get('response', '')
-            received_fields = self.__parse_received_data(received)
-            # Calculate censorship if required
-            matches_blockpage = 0
-            if self.__labeled and response['matches_template'] and not scan['anomaly']:
-                matches_blockpage = -1
-            if self.__labeled and len(received_fields['received_body']) > 0:
-                matches_blockpage = self.__blockpage_match(received['body'])
-
+            try:
+                if self.__anomalies and response['matches_template']:
+                    # Not an anomaly.
+                    continue
+                received_fields = self.__parse_received_data(received)
+                # Calculate censorship if required
+                matches_blockpage = 0
+                if self.__labeled and response['matches_template'] and not scan['anomaly']:
+                    matches_blockpage = -1
+                elif self.__labeled and len(received_fields['received_body']) > 0:
+                    matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+            except KeyError:
+                # There's something out of spec with this item.
+                continue
 
             # Process time strings into a unix timestamp.
             start = isoparse(response['start_time'])
@@ -395,7 +407,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             'domain': row['domain'],
             'ip': row['ip'],
             'location': country,
-            'timestamp': row['start_time']
+            'timestamp': row['start_time'],
+            'censored': row['censored']
         }
         # Row keys with static length data.
         static_keys = ('success', 'anomaly', 'controls_failed', 'stateful_block', 'start_time', 'end_time', 'received_tls_version', 'received_tls_cipher_suite', 'received_tls_cert')
@@ -413,8 +426,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         for key in text_keys:
             concatenated += row[key]
         meta_tensor = MetaTensor(
-            metadata=json.dumps(metadata),
-            censored=row['censored'],
+            metadata=metadata,
             static_size=torch.tensor(static_dimension),
             variable_text=self.__xlmr.encode(concatenated)
         )
@@ -486,7 +498,10 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             'received_tls_cert': 0,
         }
         if isinstance(received, str):
-            data['received_status'] = received
+            match = re.search(r'^HTTP/[\d.]+\s(\d+)', received)
+            if match:
+                data['received_status'] = match.group(1)
+            data['received_body'] = received
             return data
         if 'status_line' in received:
             data['received_status'] = received['status_line']
