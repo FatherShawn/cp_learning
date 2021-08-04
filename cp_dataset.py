@@ -52,21 +52,11 @@ class QuackShards(IterableDataset, Shorthands):
         shard = index // self.__shard_size
         response_id = index % self.__shard_size - 1
         url = f'{self.__url}/quack-{shard}.tar'
-        with tarfile.open(url, mode="r") as shard_stream:
-            meta = shard_stream.getmember(f'response-{response_id}.metadata.json')
-            static_size = shard_stream.getmember(f'response-{response_id}.static_size.pth')
-            variable_text = shard_stream.getmember(f'response-{response_id}.variable_text.pth')
-            meta_data = shard_stream.extractfile(meta).read()
-            static_data = shard_stream.extractfile(static_size).read()
-            variable_data = shard_stream.extractfile(variable_text).read()
-        meta = autodecode.basichandlers('metadata.json', meta_data)
-        static = autodecode.basichandlers('static_size.pth', static_data)
-        variable = autodecode.basichandlers('variable_text.pth', variable_data)
-        return MetaTensor(
-            metadata=meta,
-            static_size=static,
-            variable_text=variable
-        )
+        with tarfile.open(url, mode="r") as tarball:
+            target = tarball.getmember(f'response-{response_id}.metadata.json')
+            target_data = tarball.extractfile(target).read()
+        stream = BytesIO(target_data)
+        return torch.load(stream)
 
     def __len__(self) -> int:
         return self.__length
