@@ -22,10 +22,10 @@ class QuackShards(IterableDataset, Shorthands):
         # Get metadata.
         with open(f'{url}/cp_dataset.json', 'r') as dataset_metadata:
             metadata = json.load(dataset_metadata)
-            self.__shard_size = metadata['shards']
+            self.__shard_size = metadata['shard_size']
             self.__length = metadata['length']
         # Calculate shards.
-        shards = self.__length // self.__shard_size
+        shards = metadata['shards']
         urls = f'{self.__url}/quack-{{0..{shards}}}.tar'
         self.__shards = ShardList(urls)
         # Set the length.

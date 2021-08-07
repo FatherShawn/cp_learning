@@ -2,21 +2,86 @@ from cp_flatten import CensoredPlanetFlatten
 import json
 import os
 import shutil
+import tarfile
 import torch
 
 SHARD_SIZE = 3000
-STORAGE_PATH = '/home/shawn/censored-planet/preprocessed'
+STORAGE_PATH = ''
+MAX_VERIFICATION_ATTEMPTS = 10
+
+def verify_tarball(path: str):
+    verified = False
+    if not tarfile.is_tarfile(path):
+        # Immediately fails.
+        return verified
+    with tarfile.open(path, 'r') as tarball:
+        try:
+            names = tarball.getnames()
+            # If we can get names without error the index is likely good.
+            # Now verify that all the names read properly.
+            for name in names:
+                if not 'response-' in name:
+                    continue
+                response = tarball.extractfile(name)
+                item = torch.load(response)
+
+                verify_returned_item(item)
+            verified = True
+        except tarfile.TarError as e:
+            # Corrupted tarfile.
+            verified = False
+            print(f'Verify failed: {str(e)}')
+        except AssertionError as e:
+            # One of the assertions in verify_returned_item() failed.
+            verified = False
+            print(f'Verify failed: {str(e)}')
+        except RuntimeError as e:
+            # Checking for occurrence of:
+            # RuntimeError: PytorchStreamReader failed reading zip archive: too many files
+            verified = False
+            print(f'Verify failed: {str(e)}')
+        except AttributeError as e:
+            # Checking for occurrence of:
+            # AttributeError: Can't get attribute '_rebwild_tenqor_v2' which is not an actual method.
+            # Probably a failed pickle?
+            verified = False
+            print(f'Verify failed: {str(e)}')
+    return verified
+
+def verify_returned_item(item):
+    meta = item['metadata']
+    assert (isinstance(item, dict)), 'Item from the dataset is not a dictionary.'
+    assert ('metadata' in item), 'Key "metadata" not found in item from the dataset.'
+    assert ('static_size' in item), 'Key "static_size" not found in item from the dataset.'
+    assert ('variable_text' in item), 'Key "variable_text" not found in item from the dataset.'
+    assert isinstance(meta, dict)
+    assert len(meta) == 5
+    assert (isinstance(item['static_size'], torch.Tensor)), 'static_size is not a Tensor'
+    assert (isinstance(item['variable_text'], torch.Tensor)), 'variable_text is not a Tensor'
+    assert (meta['censored'] in (1, 0, -1)), 'censored value is out of bounds'
 
 def create_shard(id: int) -> None:
+    verified = False
+    failure_count = 0
     shard_name = f'{STORAGE_PATH}/quack-{id}'
-    print(f'archiving {STORAGE_PATH}/quack-{id}')
-    shutil.make_archive(shard_name, 'tar', shard_name)
+    tarball = f'{STORAGE_PATH}/quack-{id}.tar'
+    while not verified:
+        shutil.make_archive(shard_name, 'tar', shard_name)
+        if verify_tarball(tarball):
+            verified = True
+            continue
+        failure_count += 1
+        os.remove(tarball)
+        if failure_count > MAX_VERIFICATION_ATTEMPTS:
+            print('Max verification failures exceeded.')
+            raise RuntimeError
+    print(f'verified {tarball}')
     shutil.rmtree(shard_name)
 
 
 def main() -> None:
     urls = [
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-19-01-01-01.tar.gz'
+
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
@@ -29,16 +94,8 @@ def main() -> None:
     }
     for item in dataset:
         # Validate:
-        assert (isinstance(item, dict)), 'Item from the dataset is not a dictionary.'
-        assert ('metadata' in item), 'Key "metadata" not found in item from the dataset.'
-        assert ('static_size' in item), 'Key "static_size" not found in item from the dataset.'
-        assert ('variable_text' in item), 'Key "variable_text" not found in item from the dataset.'
         meta = item['metadata']
-        assert isinstance(meta, dict)
-        assert len(meta) == 5
-        assert (isinstance(item['static_size'], torch.Tensor)), 'static_size is not a Tensor'
-        assert (isinstance(item['variable_text'], torch.Tensor)), 'variable_text is not a Tensor'
-        assert (meta['censored'] in (1, 0, -1)), 'censored value is out of bounds'
+        verify_returned_item(item)
         # Store:
         path = f'{STORAGE_PATH}/quack-{shard}/response-{count % SHARD_SIZE}'
         torch.save(item,path)
@@ -65,7 +122,8 @@ def main() -> None:
 
     with open(f'{STORAGE_PATH}/cp_dataset.json', 'w') as dataset_metadata:
         data = {
-            'shards': SHARD_SIZE,
+            'shard_size': SHARD_SIZE,
+            'shards': shard,
             'length': count,
             'stats': stats
         }
@@ -76,6 +134,7 @@ def main() -> None:
     print(f'{count} items in the dataset with the following distribution:')
     for key, value in stats.items():
         print(f'{key}: {value}')
+
 
 if __name__ == '__main__':
     main()
