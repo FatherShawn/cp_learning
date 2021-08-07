@@ -40,6 +40,7 @@ class Row(TypedDict):
     If data is unlabeled, censorship defaults to 0.
     """
     ip: str
+    location: str
     domain: str
     anomaly: bool
     controls_failed: bool
@@ -279,6 +280,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             # Create row data.
             row = Row(
                 ip=scan['Server'],
+                location= '',
                 domain=domain,
                 anomaly=scan['Blocked'],
                 censored=matches_blockpage,
@@ -350,6 +352,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             # Create row data.
             row = Row(
                 ip=scan['vp'],
+                location=scan['location']['country_name'],
                 domain=scan['test_url'],
                 anomaly=scan['anomaly'],
                 censored=matches_blockpage,
@@ -397,11 +400,14 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         # See if we can look up a country from the ip.
 
-        try:
-            lookup = self.__ip2geo.country(row['ip'])
-            country = lookup.country.name
-        except geoip2.errors.AddressNotFoundError:
-            country = None
+        if not len(row['location']):
+            try:
+                lookup = self.__ip2geo.country(row['ip'])
+                country = lookup.country.name
+            except geoip2.errors.AddressNotFoundError:
+                country = None
+        else:
+            country = row['location']
 
         metadata = {
             'domain': row['domain'],
