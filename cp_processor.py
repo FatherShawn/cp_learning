@@ -1,36 +1,30 @@
 from cp_flatten import CensoredPlanetFlatten
+from pathlib import Path
+import gc
 import json
 import os
 import shutil
 import tarfile
 import torch
 
-SHARD_SIZE = 3000
+SHARD_SIZE = 2000
 STORAGE_PATH = ''
 MAX_VERIFICATION_ATTEMPTS = 10
 
 def verify_tarball(path: str):
     verified = False
+    scratch = '/home/shawn/censored-planet/preprocessed/tmp'
+    os.makedirs(scratch, 0o755, True)
     if not tarfile.is_tarfile(path):
         # Immediately fails.
         return verified
-    with tarfile.open(path, 'r') as tarball:
+    shutil.unpack_archive(path, scratch)
+    files = Path(scratch).glob('response-*')
+    for file in files:
         try:
-            names = tarball.getnames()
-            # If we can get names without error the index is likely good.
-            # Now verify that all the names read properly.
-            for name in names:
-                if not 'response-' in name:
-                    continue
-                response = tarball.extractfile(name)
-                item = torch.load(response)
-
-                verify_returned_item(item)
+            item = torch.load(file)
+            verify_returned_item(item)
             verified = True
-        except tarfile.TarError as e:
-            # Corrupted tarfile.
-            verified = False
-            print(f'Verify failed: {str(e)}')
         except AssertionError as e:
             # One of the assertions in verify_returned_item() failed.
             verified = False
@@ -46,6 +40,7 @@ def verify_tarball(path: str):
             # Probably a failed pickle?
             verified = False
             print(f'Verify failed: {str(e)}')
+    shutil.rmtree(scratch)
     return verified
 
 def verify_returned_item(item):
@@ -99,6 +94,22 @@ def main() -> None:
         # Store:
         path = f'{STORAGE_PATH}/quack-{shard}/response-{count % SHARD_SIZE}'
         torch.save(item,path)
+        try:
+            # Make sure immediately that we can re-load
+            # log and skip on failure
+            recheck = torch.load(path)
+            verify_returned_item(recheck)
+        except AssertionError as e:
+            # One of the assertions in verify_returned_item() failed.
+            print(f'Immediate reload failed assertions: {str(e)}')
+            os.remove(path)
+            continue
+        except RuntimeError as e:
+            # Checking for occurrence of:
+            # RuntimeError: PytorchStreamReader failed reading zip archive: too many files
+            print(f'Immediate reload failed in runtime: {str(e)}')
+            os.remove(path)
+            continue
         # Count:
         if meta['censored'] == 1:
             stats['censored'] += 1
@@ -110,11 +121,13 @@ def main() -> None:
         # Check.
         if count % SHARD_SIZE == 0:
             create_shard(shard)
+            # Try to prevent an intermittent segfault.
+            gc.collect()
             shard += 1
             os.makedirs(f'{STORAGE_PATH}/quack-{shard}', 0o755, True)
     # Process the last shard. If it has files, it has not been archived.
     unprocessed = sum(len(files) for _, _, files in os.walk(f'{STORAGE_PATH}/quack-{shard}'))
-    if (unprocessed):
+    if unprocessed:
         create_shard(shard)
     else:
         print(f'{STORAGE_PATH}/quack-{shard} is empty. Removing.')

@@ -558,3 +558,4 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         if blockpage:
             return 1
         return -1
+
