@@ -1,12 +1,19 @@
 import json
+import numpy
+import os
+import shutil
 import torch
 import tarfile
 from io import BytesIO
+from pathlib import Path
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataset import T_co
-from typing import Iterator, Tuple
-from cp_flatten import MetaTensor
-from webdataset import ShardList, Shorthands, tariterators, url_opener, autodecode
+from typing import Iterator
+from cp_flatten import TokenizedQuackData
+from webdataset import ShardList, Shorthands
+
+from cp_processor import STORAGE_PATH
+
 
 class QuackShards(IterableDataset, Shorthands):
     """
@@ -24,25 +31,27 @@ class QuackShards(IterableDataset, Shorthands):
             metadata = json.load(dataset_metadata)
             self.__shard_size = metadata['shard_size']
             self.__length = metadata['length']
-        # Calculate shards.
+        # Get shard count.
         shards = metadata['shards']
-        urls = f'{self.__url}/quack-{{0..{shards}}}.tar'
+        urls = []
+        for index in range(shards + 1):
+             urls.append(f'{self.__url}/{index // 1000}/{index}')
         self.__shards = ShardList(urls)
         # Set the length.
 
 
-    def __iter__(self) -> Iterator[MetaTensor]:
-        for shard in url_opener(self.__shards):
-            current_url = shard['url']
-            print(f'Processing {current_url}:')
-            # Use a small stack to build a set of 3 files.
-            # Each processed item is stored as 3 files in the tarball
-            response_set = []
-            for filename, data in tariterators.tar_file_expander([shard]):
-                if not 'response-' in filename:
-                    continue
-                stream = BytesIO(data)
-                yield torch.load(stream)
+    def __iter__(self) -> Iterator[TokenizedQuackData]:
+        for shard in self.__shards:
+            for response in Path(shard['url']).iterdir():
+                with open(response / 'metadata.json', 'r') as response_metadata:
+                    metadata = json.load(response_metadata)
+                static_size = numpy.load(response / 'static_size.npy')
+                variable_text = numpy.load(response / 'variable_text.npy')
+                yield TokenizedQuackData(
+                    metadata=metadata,
+                    static_size=static_size,
+                    variable_text=variable_text
+                )
 
     def __getitem__(self, index) -> T_co:
         """

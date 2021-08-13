@@ -1,49 +1,13 @@
-from cp_flatten import CensoredPlanetFlatten
-from pathlib import Path
-import gc
+from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
 import json
+import numpy
 import os
-import shutil
-import tarfile
-import torch
 
-SHARD_SIZE = 2000
-STORAGE_PATH = ''
+SHARD_SIZE = 1000
+STORAGE_PATH = '/home/shawn/censored-planet/preprocessed'
 MAX_VERIFICATION_ATTEMPTS = 10
 
-def verify_tarball(path: str):
-    verified = False
-    scratch = '/home/shawn/censored-planet/preprocessed/tmp'
-    os.makedirs(scratch, 0o755, True)
-    if not tarfile.is_tarfile(path):
-        # Immediately fails.
-        return verified
-    shutil.unpack_archive(path, scratch)
-    files = Path(scratch).glob('response-*')
-    for file in files:
-        try:
-            item = torch.load(file)
-            verify_returned_item(item)
-            verified = True
-        except AssertionError as e:
-            # One of the assertions in verify_returned_item() failed.
-            verified = False
-            print(f'Verify failed: {str(e)}')
-        except RuntimeError as e:
-            # Checking for occurrence of:
-            # RuntimeError: PytorchStreamReader failed reading zip archive: too many files
-            verified = False
-            print(f'Verify failed: {str(e)}')
-        except AttributeError as e:
-            # Checking for occurrence of:
-            # AttributeError: Can't get attribute '_rebwild_tenqor_v2' which is not an actual method.
-            # Probably a failed pickle?
-            verified = False
-            print(f'Verify failed: {str(e)}')
-    shutil.rmtree(scratch)
-    return verified
-
-def verify_returned_item(item):
+def verify_returned_item(item: TokenizedQuackData) -> None:
     meta = item['metadata']
     assert (isinstance(item, dict)), 'Item from the dataset is not a dictionary.'
     assert ('metadata' in item), 'Key "metadata" not found in item from the dataset.'
@@ -51,37 +15,27 @@ def verify_returned_item(item):
     assert ('variable_text' in item), 'Key "variable_text" not found in item from the dataset.'
     assert isinstance(meta, dict)
     assert len(meta) == 5
-    assert (isinstance(item['static_size'], torch.Tensor)), 'static_size is not a Tensor'
-    assert (isinstance(item['variable_text'], torch.Tensor)), 'variable_text is not a Tensor'
+    assert (isinstance(item['static_size'], numpy.ndarray)), 'static_size is not a numpy array'
+    assert (isinstance(item['variable_text'], numpy.ndarray)), 'variable_text is not a numpy array'
     assert (meta['censored'] in (1, 0, -1)), 'censored value is out of bounds'
-
-def create_shard(id: int) -> None:
-    verified = False
-    failure_count = 0
-    shard_name = f'{STORAGE_PATH}/quack-{id}'
-    tarball = f'{STORAGE_PATH}/quack-{id}.tar'
-    while not verified:
-        shutil.make_archive(shard_name, 'tar', shard_name)
-        if verify_tarball(tarball):
-            verified = True
-            continue
-        failure_count += 1
-        os.remove(tarball)
-        if failure_count > MAX_VERIFICATION_ATTEMPTS:
-            print('Max verification failures exceeded.')
-            raise RuntimeError
-    print(f'verified {tarball}')
-    shutil.rmtree(shard_name)
 
 
 def main() -> None:
     urls = [
-
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-08-02-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-29-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-28-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-26-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-25-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-22-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-21-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-19-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-15-01-01-01.tar.gz',
+        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-14-01-01-02.tar.gz'
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
     shard = 0
-    os.makedirs(f'{STORAGE_PATH}/quack-{shard}', 0o755, True)
     stats = {
         'censored': 0,
         'undetermined': 0,
@@ -92,24 +46,12 @@ def main() -> None:
         meta = item['metadata']
         verify_returned_item(item)
         # Store:
-        path = f'{STORAGE_PATH}/quack-{shard}/response-{count % SHARD_SIZE}'
-        torch.save(item,path)
-        try:
-            # Make sure immediately that we can re-load
-            # log and skip on failure
-            recheck = torch.load(path)
-            verify_returned_item(recheck)
-        except AssertionError as e:
-            # One of the assertions in verify_returned_item() failed.
-            print(f'Immediate reload failed assertions: {str(e)}')
-            os.remove(path)
-            continue
-        except RuntimeError as e:
-            # Checking for occurrence of:
-            # RuntimeError: PytorchStreamReader failed reading zip archive: too many files
-            print(f'Immediate reload failed in runtime: {str(e)}')
-            os.remove(path)
-            continue
+        path = f'{STORAGE_PATH}/{shard // 1000}/{shard}/{count % SHARD_SIZE}'
+        os.makedirs(path, 0o755, True)
+        with open(f'{path}/metadata.json', 'w') as response_metadata:
+            response_metadata.write(json.dumps(meta))
+        numpy.save(f'{path}/static_size', item['static_size'])
+        numpy.save(f'{path}/variable_text', item['variable_text'])
         # Count:
         if meta['censored'] == 1:
             stats['censored'] += 1
@@ -120,18 +62,8 @@ def main() -> None:
         count += 1
         # Check.
         if count % SHARD_SIZE == 0:
-            create_shard(shard)
-            # Try to prevent an intermittent segfault.
-            gc.collect()
+            print(f'processed full shard: {shard}')
             shard += 1
-            os.makedirs(f'{STORAGE_PATH}/quack-{shard}', 0o755, True)
-    # Process the last shard. If it has files, it has not been archived.
-    unprocessed = sum(len(files) for _, _, files in os.walk(f'{STORAGE_PATH}/quack-{shard}'))
-    if unprocessed:
-        create_shard(shard)
-    else:
-        print(f'{STORAGE_PATH}/quack-{shard} is empty. Removing.')
-        shutil.rmtree(f'{STORAGE_PATH}/quack-{shard}')
 
     with open(f'{STORAGE_PATH}/cp_dataset.json', 'w') as dataset_metadata:
         data = {
@@ -147,7 +79,6 @@ def main() -> None:
     print(f'{count} items in the dataset with the following distribution:')
     for key, value in stats.items():
         print(f'{key}: {value}')
-
 
 if __name__ == '__main__':
     main()

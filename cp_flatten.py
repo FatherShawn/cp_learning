@@ -5,6 +5,7 @@ import logging
 import torch
 import geoip2.database
 import geoip2.errors
+import numpy
 from torch.utils.data.dataset import T_co
 from blockpage import BlockpageMatcher
 from collections import defaultdict
@@ -58,10 +59,10 @@ class Row(TypedDict):
     received_headers: str
     received_body: str
 
-class MetaTensor(TypedDict):
+class TokenizedQuackData(TypedDict):
     metadata: dict
-    static_size: torch.Tensor
-    variable_text: torch.Tensor
+    static_size: numpy.ndarray
+    variable_text: numpy.ndarray
 
 class CensoredPlanetFlatten(IterableDataset, Shorthands):
     """
@@ -104,10 +105,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__labeled = labeled
         self.__anomalies = anomalies
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
-        self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large')
+        self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large') # Type: RobertaHubInterface
         self.__xlmr.eval()
+        self.__xlmr = self.__xlmr.cuda()
 
-    def __iter__(self) -> Iterator[MetaTensor]:
+    def __iter__(self) -> Iterator[TokenizedQuackData]:
         for quack_file in url_opener(self.__shards):
             current_url = quack_file['url']
             print(f'Processing {current_url}:')
@@ -223,7 +225,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         except Exception as exn:
             handler(exn)
 
-    def __process_hyperquack_v1(self, scan: Dict) -> Iterator[MetaTensor]:
+    def __process_hyperquack_v1(self, scan: Dict) -> Iterator[TokenizedQuackData]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V1 format.
 
@@ -238,7 +240,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Yields
         -------
-        MetaTensor
+        TokenizedQuackData
         """
         for index, result in enumerate(scan.get('Results', [])):
             domain = self.__extract_domain_from_sent_field(result['Sent'])
@@ -301,7 +303,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             meta_tensor = self.__process_row(row)
             yield  meta_tensor
 
-    def __process_hyperquack_v2(self, scan: Dict) -> Iterator[MetaTensor]:
+    def __process_hyperquack_v2(self, scan: Dict) -> Iterator[TokenizedQuackData]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V2 format.
 
@@ -316,7 +318,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Yields
         -------
-        MetaTensor
+        TokenizedQuackData
         """
         controls_failed = False
         if 'controls_failed' in scan:
@@ -372,7 +374,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             )
             yield self.__process_row(row)
 
-    def __process_satellite(self, filename: str, scan: Dict) -> MetaTensor:
+    def __process_satellite(self, filename: str, scan: Dict) -> TokenizedQuackData:
         """
 
         Parameters
@@ -382,11 +384,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Returns
         -------
-        MetaTensor
+        TokenizedQuackData
         """
         pass
 
-    def __process_row(self, row: Row) -> MetaTensor:
+    def __process_row(self, row: Row) -> TokenizedQuackData:
         """
         Transforms flattened data in a Row into a torch.Tensor with metadata.
 
@@ -396,7 +398,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Returns
         -------
-        MetaTensor
+        TokenizedQuackData
         """
         # See if we can look up a country from the ip.
 
@@ -431,10 +433,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         # Concatenate the strings.
         for key in text_keys:
             concatenated += row[key]
-        meta_tensor = MetaTensor(
+        encoded = self.__xlmr.encode(concatenated) # Type: torch.Tensor
+        meta_tensor = TokenizedQuackData(
             metadata=metadata,
-            static_size=torch.tensor(static_dimension),
-            variable_text=self.__xlmr.encode(concatenated)
+            static_size=numpy.array(static_dimension),
+            variable_text=encoded.numpy()
         )
         return meta_tensor
 
