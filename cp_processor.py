@@ -22,16 +22,6 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     urls = [
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-08-02-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-29-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-28-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-26-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-25-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-22-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-21-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-19-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-15-01-01-01.tar.gz',
-        '/home/shawn/censored-planet/quackDataTar/CP_Quack-echo-2021-07-14-01-01-02.tar.gz'
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
