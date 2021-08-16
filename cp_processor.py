@@ -4,7 +4,7 @@ import numpy
 import os
 
 SHARD_SIZE = 1000
-STORAGE_PATH = '/home/shawn/censored-planet/preprocessed'
+STORAGE_PATH = ''
 MAX_VERIFICATION_ATTEMPTS = 10
 
 def verify_returned_item(item: TokenizedQuackData) -> None:
@@ -22,6 +22,7 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     urls = [
+
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
@@ -40,8 +41,7 @@ def main() -> None:
         os.makedirs(path, 0o755, True)
         with open(f'{path}/metadata.json', 'w') as response_metadata:
             response_metadata.write(json.dumps(meta))
-        numpy.save(f'{path}/static_size', item['static_size'])
-        numpy.save(f'{path}/variable_text', item['variable_text'])
+        numpy.savez(f'{path}/data', static_size=item['static_size'], variable_text=item['variable_text'])
         # Count:
         if meta['censored'] == 1:
             stats['censored'] += 1
@@ -52,7 +52,6 @@ def main() -> None:
         count += 1
         # Check.
         if count % SHARD_SIZE == 0:
-            print(f'processed full shard: {shard}')
             shard += 1
 
     with open(f'{STORAGE_PATH}/cp_dataset.json', 'w') as dataset_metadata:
