@@ -107,7 +107,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
         self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large') # Type: RobertaHubInterface
         self.__xlmr.eval()
-        self.__xlmr = self.__xlmr.cuda()
 
     def __iter__(self) -> Iterator[TokenizedQuackData]:
         for quack_file in url_opener(self.__shards):
