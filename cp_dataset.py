@@ -1,7 +1,5 @@
 import json
 import numpy
-import os
-import shutil
 import torch
 import tarfile
 from io import BytesIO
@@ -45,8 +43,9 @@ class QuackShards(IterableDataset, Shorthands):
             for response in Path(shard['url']).iterdir():
                 with open(response / 'metadata.json', 'r') as response_metadata:
                     metadata = json.load(response_metadata)
-                static_size = numpy.load(response / 'static_size.npy')
-                variable_text = numpy.load(response / 'variable_text.npy')
+                with numpy.load(response / 'data.npz') as data:
+                    static_size = data['static_size']
+                    variable_text = data['variable_text']
                 yield TokenizedQuackData(
                     metadata=metadata,
                     static_size=static_size,
