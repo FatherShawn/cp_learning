@@ -1,5 +1,3 @@
-import faulthandler
-faulthandler.enable()
 from cp_dataset import QuackShards
 from cp_processor import verify_returned_item
 from progress.bar import IncrementalBar
@@ -7,7 +5,7 @@ from progress.bar import IncrementalBar
 
 
 def main():
-    url = '/home/shawn/censored-planet/preprocessed'
+    url = ''
     dataset = QuackShards(url)
     count = 0
     stats = {
