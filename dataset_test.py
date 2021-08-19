@@ -5,8 +5,8 @@ from progress.bar import IncrementalBar
 
 
 def main():
-    url = ''
-    dataset = QuackShards(url)
+    path = '/data/quack-07.22.01-08.11.01.hdf5'
+    dataset = QuackShards(path)
     count = 0
     stats = {
         'censored': 0,
@@ -28,9 +28,14 @@ def main():
             count += 1
             bar.next()
 
-    print(f'{count} items in the dataset with the following distribution:')
+    print(f'{count} items found in the dataset with the following distribution:')
     for key, value in stats.items():
         print(f'{key}: {value}')
+
+    assert count == len(dataset), f"Dataset should contain{len(dataset)} items but counted {count} items"
+    assert stats['censored'] == dataset.censored(), f"Dataset should contain{dataset.censored()} censored items but counted {stats['censored']} items"
+    assert stats['undetermined'] == dataset.undetermined(), f"Dataset should contain{dataset.undetermined()} censored items but counted {stats['undetermined']} items"
+    assert stats['censored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
 
 
 if __name__ == '__main__':

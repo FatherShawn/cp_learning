@@ -1,10 +1,11 @@
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
+import h5py
 import json
 import numpy
 import os
 
 SHARD_SIZE = 1000
-STORAGE_PATH = ''
+STORAGE_PATH = '/data/quack-07.22.01-08.11.01.hdf5'
 MAX_VERIFICATION_ATTEMPTS = 10
 
 def verify_returned_item(item: TokenizedQuackData) -> None:
@@ -22,47 +23,48 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     urls = [
-
+        '/data/quack/CP_Quack-echo-2021-08-11-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-08-09-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-08-04-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-08-02-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-08-08-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-07-29-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-07-28-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-07-26-01-01-01.tar.gz',
+        '/data/quack/CP_Quack-echo-2021-07-22-01-01-01.tar.gz'
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
-    shard = 0
     stats = {
         'censored': 0,
         'undetermined': 0,
         'uncensored': 0
     }
-    for item in dataset:
-        # Validate:
-        meta = item['metadata']
-        verify_returned_item(item)
-        # Store:
-        path = f'{STORAGE_PATH}/{shard // 1000}/{shard}/{count % SHARD_SIZE}'
-        os.makedirs(path, 0o755, True)
-        with open(f'{path}/metadata.json', 'w') as response_metadata:
-            response_metadata.write(json.dumps(meta))
-        numpy.savez(f'{path}/data', static_size=item['static_size'], variable_text=item['variable_text'])
-        # Count:
-        if meta['censored'] == 1:
-            stats['censored'] += 1
-        elif meta['censored'] == 0:
-            stats['undetermined'] += 1
-        elif meta['censored'] == -1:
-            stats['uncensored'] += 1
-        count += 1
-        # Check.
-        if count % SHARD_SIZE == 0:
-            shard += 1
-
-    with open(f'{STORAGE_PATH}/cp_dataset.json', 'w') as dataset_metadata:
-        data = {
-            'shard_size': SHARD_SIZE,
-            'shards': shard,
-            'length': count,
-            'stats': stats
-        }
-        dataset_metadata.write(json.dumps(data, indent=4))
-        print('metadata stored to cp_dataset.json')
+    with h5py.File(STORAGE_PATH, 'w') as storage:
+        for item in dataset:
+            # Validate:
+            meta = item['metadata']
+            verify_returned_item(item)
+            # Create response group
+            index = str(count)
+            response = storage.create_group(index)
+            # Store:
+            for key, value in meta.items():
+                response.attrs[key] = value
+            response.create_dataset('static_size', data=item['static_size'])
+            response.create_dataset('variable_text', data=item['variable_text'])
+            # Count:
+            if meta['censored'] == 1:
+                stats['censored'] += 1
+            elif meta['censored'] == 0:
+                stats['undetermined'] += 1
+            elif meta['censored'] == -1:
+                stats['uncensored'] += 1
+            count += 1
+        storage.attrs['length'] = count
+        storage.attrs['censored'] = stats['censored']
+        storage.attrs['undetermined'] = stats['undetermined']
+        storage.attrs['uncensored'] = stats['uncensored']
 
     # Report
     print(f'{count} items in the dataset with the following distribution:')

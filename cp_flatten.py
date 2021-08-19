@@ -10,6 +10,7 @@ from torch.utils.data.dataset import T_co
 from blockpage import BlockpageMatcher
 from collections import defaultdict
 from dateutil.parser import isoparse
+from fairseq.models.roberta import XLMRModel
 from io import BufferedReader
 from torch.utils.data import IterableDataset
 from typing import Any, Callable, Dict, Iterator, Set, Tuple, TypedDict, Union
@@ -145,7 +146,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                                 continue
                             yield from self.__process_hyperquack_v2(scan)
                         else:
-                            raise Exception(f"Line with unknown hyperquack format:\n{scan}")
+                            print(f"Line skipped with unknown hyperquack format:\n{scan}")
                     except StopIteration:
                         iterate_lines = False
                     except Exception as exn:
