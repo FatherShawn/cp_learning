@@ -1,12 +1,14 @@
-from cp_dataset import QuackShards
+from cp_dataset import QuackIterableDataset
 from cp_processor import verify_returned_item
 from progress.bar import IncrementalBar
 
 
-
 def main():
-    path = '/data/quack-07.22.01-08.11.01.hdf5'
-    dataset = QuackShards(path)
+    # A list of paths to HDF5 files.
+    paths = [
+
+    ]
+    dataset = QuackIterableDataset(paths)
     count = 0
     stats = {
         'censored': 0,
@@ -35,7 +37,7 @@ def main():
     assert count == len(dataset), f"Dataset should contain{len(dataset)} items but counted {count} items"
     assert stats['censored'] == dataset.censored(), f"Dataset should contain{dataset.censored()} censored items but counted {stats['censored']} items"
     assert stats['undetermined'] == dataset.undetermined(), f"Dataset should contain{dataset.undetermined()} censored items but counted {stats['undetermined']} items"
-    assert stats['censored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
+    assert stats['uncensored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
 
 
 if __name__ == '__main__':

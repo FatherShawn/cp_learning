@@ -1,12 +1,10 @@
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
 import h5py
-import json
+from datetime import datetime
 import numpy
-import os
 
-SHARD_SIZE = 1000
-STORAGE_PATH = '/data/quack-07.22.01-08.11.01.hdf5'
-MAX_VERIFICATION_ATTEMPTS = 10
+STORAGE_PATH = '/data/2021-08-16.hdf5'
+LOG_PATH = '/data/process_log.txt'
 
 def verify_returned_item(item: TokenizedQuackData) -> None:
     meta = item['metadata']
@@ -23,15 +21,7 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     urls = [
-        '/data/quack/CP_Quack-echo-2021-08-11-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-08-09-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-08-04-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-08-02-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-08-08-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-07-29-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-07-28-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-07-26-01-01-01.tar.gz',
-        '/data/quack/CP_Quack-echo-2021-07-22-01-01-01.tar.gz'
+
     ]
     dataset = CensoredPlanetFlatten(urls, True, True)
     count = 0
@@ -47,8 +37,8 @@ def main() -> None:
             verify_returned_item(item)
             # Create response group
             index = str(count)
-            response = storage.create_group(index)
             # Store:
+            response = storage.create_group(index)
             for key, value in meta.items():
                 response.attrs[key] = value
             response.create_dataset('static_size', data=item['static_size'])
@@ -61,15 +51,20 @@ def main() -> None:
             elif meta['censored'] == -1:
                 stats['uncensored'] += 1
             count += 1
+            if count % 100000 == 0:
+                with open(LOG_PATH, 'a') as log:
+                    item_date = datetime.fromtimestamp(meta['timestamp']).date().isoformat()
+                    log.write(f'Processed {count:,} items. Last item processed was from {item_date}\n')
         storage.attrs['length'] = count
         storage.attrs['censored'] = stats['censored']
         storage.attrs['undetermined'] = stats['undetermined']
         storage.attrs['uncensored'] = stats['uncensored']
 
     # Report
-    print(f'{count} items in the dataset with the following distribution:')
-    for key, value in stats.items():
-        print(f'{key}: {value}')
+    with open(LOG_PATH, 'a') as log:
+        log.write(f'{count} items in the dataset with the following distribution:\n')
+        for key, value in stats.items():
+            log.write(f'{key}: {value}\n')
 
 if __name__ == '__main__':
     main()

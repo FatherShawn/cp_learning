@@ -1,53 +1,90 @@
 import h5py
-import json
+import itertools
 import numpy as np
-import torch
-import tarfile
-from io import BytesIO
-from pathlib import Path
+from bisect import bisect_left
 from torch.utils.data import IterableDataset
-from torch.utils.data.dataset import T_co
-from typing import Iterator
+from typing import Iterator, List, Tuple
 from cp_flatten import TokenizedQuackData
 
-from cp_processor import STORAGE_PATH
 
-
-class QuackShards(IterableDataset):
+class QuackIterableDataset(IterableDataset):
     """
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, paths: List[str]) -> None:
+        """
+
+        Parameters
+        ----------
+        paths: List[str]
+            A list of paths as strings.
+        """
         super().__init__()
 
         assert (
-                path is not None
-        ), "Must supply a file path as a string to the dataset directory"
-        self.__path = path
-        # Get metadata.
-        with h5py.File(self.__path, 'r') as storage:
-            self.__length = storage.attrs['length']
-            self.__censored = storage.attrs['censored']
-            self.__undetermined = storage.attrs['undetermined']
-            self.__uncensored = storage.attrs['uncensored']
+                paths is not None and isinstance(paths, list)
+        ), "Must supply a set of file paths as a list"
+        # Initialize parameters:
+        self.__length = 0
+        self.__censored = 0
+        self.__undetermined = 0
+        self.__uncensored = 0
+        self.__paths = paths
+        self.__path_breakpoints = []
+        self.__intermediate_lengths = []
+        # Data indices are zero based.
+        # Need to adjust total length by 1 to get correct index breakpoints.
+        breakpoint_length = -1
+        for path in paths:
+            # Get metadata.
+            with h5py.File(path, 'r') as storage:
+                self.__length += storage.attrs['length']
+                self.__censored += storage.attrs['censored']
+                self.__undetermined += storage.attrs['undetermined']
+                self.__uncensored += storage.attrs['uncensored']
+                breakpoint_length += storage.attrs['length']
+            self.__path_breakpoints.append(breakpoint_length)
+            self.__intermediate_lengths.append(self.__length)
 
     def __iter__(self) -> Iterator[TokenizedQuackData]:
-        with h5py.File(self.__path, 'r') as storage:
-            for index in range(self.__length):
-                yield self.__load_item(index, storage)
+        """
+        Iterates through all data points in the dataset.
+
+        Returns
+        -------
+
+        """
+        for index in range(self.__length):
+            relative_index, file_path = self.__locate_item(index)
+            with h5py.File(file_path, 'r') as storage:
+                item = self.__load_item(relative_index, storage)
+            yield item
 
     def __getitem__(self, index) -> TokenizedQuackData:
         """
-
+        Implements a required method to access a single data point by index.
         """
-        with h5py.File(self.__path, 'r') as storage:
-            item = self.__load_item(index, storage)
+        relative_index, file_path = self.__locate_item(index)
+        with h5py.File(file_path, 'r') as storage:
+            item = self.__load_item(relative_index, storage)
         return item
 
     def __len__(self) -> int:
         return self.__length
 
     def __load_item(self, index: int, storage: h5py.File) -> TokenizedQuackData:
+        """
+        Loads an item from an HDF5 file based on index value (group name).
+
+        Parameters
+        ----------
+        index
+        storage
+
+        Returns
+        -------
+
+        """
         group_name = str(index)
         group = storage[group_name]
         if isinstance(group, h5py.Group):
@@ -59,6 +96,30 @@ class QuackShards(IterableDataset):
                 static_size=np.array(group['static_size']),
                 variable_text=np.array(group['variable_text'])
             )
+
+    def __locate_item(self, index: int) -> Tuple[int, str]:
+        """
+        Translates a global index value into a file relative index and provides a path to the file.
+
+        Parameters
+        ----------
+        index: int
+          The index in the range of items for all the files combined.
+
+        Returns
+        -------
+        index: int
+          The correct internal index for the item in the referenced file.
+        path: str
+          A file path to the file containing the item.
+        """
+        path_index = bisect_left(self.__path_breakpoints, index)
+        path = self.__paths[path_index]
+        if path_index > 0:
+            # Subtract the lengths of the previous files.
+            index = index - self.__intermediate_lengths[path_index - 1]
+        return index, path
+
 
     def censored(self) -> int:
         return self.__censored

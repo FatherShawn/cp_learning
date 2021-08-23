@@ -106,13 +106,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__labeled = labeled
         self.__anomalies = anomalies
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
-        self.__xlmr = torch.hub.load('pytorch/fairseq', 'xlmr.large') # Type: RobertaHubInterface
+        self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
         self.__xlmr.eval()
 
     def __iter__(self) -> Iterator[TokenizedQuackData]:
         for quack_file in url_opener(self.__shards):
-            current_url = quack_file['url']
-            print(f'Processing {current_url}:')
             for filestream in self.__quack_file_expander(quack_file):
                 file_name, connection = filestream
                 iterate_lines = True
