@@ -20,6 +20,10 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 
 def main() -> None:
+    """
+    Create a list of file paths or urls to process.  The webdataset library expects a list, so if a single file at a
+    time is to be processed, place only one item in the list.
+    """
     urls = [
 
     ]

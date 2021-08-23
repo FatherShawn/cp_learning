@@ -9,6 +9,27 @@ from cp_flatten import TokenizedQuackData
 
 class QuackIterableDataset(IterableDataset):
     """
+    Iterates or selectively retrieves items from a collection of HDF5 files.  Metadata for the file is stored as
+    HDF5 Attributes:
+    length: The number of responses in the file.
+    censored: The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+        flattened as "Labeled"
+    undetermined: The number of unlabeled responses.
+    uncensored The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+        flattened as "Labeled"
+
+    Each response is stored in an HDF5 Group, named with the index number of the response, zero based.
+    Metadata for the response is stored in HDF5 Attributes on the Group:
+    domain: The domain under test
+    ip: The IPv4 address for this test
+    location: The country returned by MMDB for the IP address
+    timestamp: A Unix timestamp for the time of the test
+    censored: 1 if censored, -1 if uncensored, 0 as default (undetermined)
+
+    Each response Group stores two HDF5 Datasets:
+    'static_size': Data that is a fixed size.  See cp_flatten.CensoredPlanetFlatten.__process_row
+    'variable_text' Text data that has been encoded (tokenized) using the XLMR pretrained model.
+        See cp_flatten.CensoredPlanetFlatten.__process_row
     """
 
     def __init__(self, paths: List[str]) -> None:

@@ -105,7 +105,9 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__blockpage_matcher = BlockpageMatcher()
         self.__labeled = labeled
         self.__anomalies = anomalies
+        # Bring in the MMDB free database.
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
+        # Bring in the pretrained XLMR model.
         self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
         self.__xlmr.eval()
 
