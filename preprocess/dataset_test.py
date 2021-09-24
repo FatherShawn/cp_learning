@@ -6,7 +6,7 @@ from progress.bar import IncrementalBar
 def main():
     # A list of paths to HDF5 files.
     paths = [
-
+        '/data/2021-07-22-labeled.hdf5'
     ]
     dataset = QuackIterableDataset(paths)
     count = 0

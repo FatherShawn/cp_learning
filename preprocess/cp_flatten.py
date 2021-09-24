@@ -337,12 +337,16 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                     # Not an anomaly.
                     continue
                 received_fields = self.__parse_received_data(received)
-                # Calculate censorship if required
                 matches_blockpage = 0
-                if self.__labeled and response['matches_template'] and not scan['anomaly']:
-                    matches_blockpage = -1
-                elif self.__labeled and len(received_fields['received_body']) > 0:
-                    matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+                # Calculate censorship if required
+                if self.__labeled:
+                    if response['matches_template'] and not scan['anomaly']:
+                        matches_blockpage = -1
+                    elif len(received_fields['received_body']) > 0:
+                        matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+                    # If we only want labeled data and censorship is still undetermined, continue to the next row.
+                    if matches_blockpage == 0:
+                        continue
             except KeyError:
                 # There's something out of spec with this item.
                 continue
@@ -422,7 +426,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         static_keys = ('success', 'anomaly', 'controls_failed', 'stateful_block', 'start_time', 'end_time', 'received_tls_version', 'received_tls_cipher_suite', 'received_tls_cert')
         # Row keys with variable length (text) data.
         ##> Skipping 'received_tls_cert' for now.
-        text_keys = ('sent', 'received_status', 'received_status', 'received_headers', 'received_body')
+        text_keys = ('sent', 'received_status', 'received_headers', 'received_body')
         static_dimension = []
         # First split the ip and cast to int.
         for segment in row['ip'].split('.'):

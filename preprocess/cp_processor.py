@@ -1,10 +1,10 @@
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
 import h5py
 from datetime import datetime
-import numpy
+import numpy as np
 
-STORAGE_PATH = '/data/2021-08-16.hdf5'
-LOG_PATH = '/data/process_log.txt'
+STORAGE_PATH = ''
+LOG_PATH = ''
 
 def verify_returned_item(item: TokenizedQuackData) -> None:
     meta = item['metadata']
@@ -14,8 +14,8 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
     assert ('variable_text' in item), 'Key "variable_text" not found in item from the dataset.'
     assert isinstance(meta, dict)
     assert len(meta) == 5
-    assert (isinstance(item['static_size'], numpy.ndarray)), 'static_size is not a numpy array'
-    assert (isinstance(item['variable_text'], numpy.ndarray)), 'variable_text is not a numpy array'
+    assert (isinstance(item['static_size'], np.ndarray)), 'static_size is not a numpy array'
+    assert (isinstance(item['variable_text'], np.ndarray)), 'variable_text is not a numpy array'
     assert (meta['censored'] in (1, 0, -1)), 'censored value is out of bounds'
 
 
@@ -63,12 +63,12 @@ def main() -> None:
         storage.attrs['censored'] = stats['censored']
         storage.attrs['undetermined'] = stats['undetermined']
         storage.attrs['uncensored'] = stats['uncensored']
-
     # Report
     with open(LOG_PATH, 'a') as log:
         log.write(f'{count} items in the dataset with the following distribution:\n')
         for key, value in stats.items():
             log.write(f'{key}: {value}\n')
+
 
 if __name__ == '__main__':
     main()

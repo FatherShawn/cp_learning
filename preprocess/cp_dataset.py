@@ -1,13 +1,12 @@
 import h5py
-import itertools
 import numpy as np
 from bisect import bisect_left
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset
 from typing import Iterator, List, Tuple
 from cp_flatten import TokenizedQuackData
 
 
-class QuackIterableDataset(IterableDataset):
+class QuackIterableDataset(Dataset):
     """
     Iterates or selectively retrieves items from a collection of HDF5 files.  Metadata for the file is stored as
     HDF5 Attributes:
