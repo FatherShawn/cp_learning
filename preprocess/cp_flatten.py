@@ -94,7 +94,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         pass
 
-    def __init__(self, urls: Union[str, list[str]], labeled:bool = False, anomalies:bool = False) -> None:
+    def __init__(self, urls: Union[str, list[str]], labeled: bool = False, anomalies: bool = False) -> None:
         super().__init__()
 
         assert (
@@ -165,8 +165,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         ----------
         file_obj : BufferedReader
             A tarfile stream to the tar file.
-        skip_meta : str
-            A regular expression for file names to skip.
         handler: Callable
             The exception handler.
 
@@ -233,8 +231,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Parameters
         ----------
-        filename: str
-            A filepath string
         scan: dict
             A loaded json object containing the parsed content of the line
 
@@ -311,8 +307,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Parameters
         ----------
-        filename: str
-            A filepath string
         scan: dict
             A loaded json object containing the parsed content of the line
 

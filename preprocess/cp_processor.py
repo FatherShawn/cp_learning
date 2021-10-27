@@ -6,6 +6,18 @@ import numpy as np
 STORAGE_PATH = ''
 LOG_PATH = ''
 
+
+class FreqIter:
+
+    def __init__(self, source: dict) -> None:
+        self.__frequency_dict = source
+
+    def __iter__(self) -> int:
+        for key, value in self.__frequency_dict.items():
+            for instance in range(value):
+                yield key
+
+
 def verify_returned_item(item: TokenizedQuackData) -> None:
     meta = item['metadata']
     assert (isinstance(item, dict)), 'Item from the dataset is not a dictionary.'
@@ -27,12 +39,20 @@ def main() -> None:
     urls = [
 
     ]
-    dataset = CensoredPlanetFlatten(urls, True, True)
+    dataset = CensoredPlanetFlatten(urls, False, True)
     count = 0
+    variable_census = {}
     stats = {
         'censored': 0,
         'undetermined': 0,
-        'uncensored': 0
+        'uncensored': 0,
+        'length': 0,
+        'static_size': 0,
+        'min_text': 0,
+        'q1_text': 0,
+        'median_text': 0,
+        'q3_text': 0,
+        'max_text': 0
     }
     with h5py.File(STORAGE_PATH, 'w') as storage:
         for item in dataset:
@@ -54,15 +74,29 @@ def main() -> None:
                 stats['undetermined'] += 1
             elif meta['censored'] == -1:
                 stats['uncensored'] += 1
+            variable_size = item['variable_text'].size
+            try:
+                variable_census[variable_size] += 1
+            except KeyError:
+                variable_census[variable_size] = 1
             count += 1
             if count % 100000 == 0:
+                # Really only need to store this once, but this is better than another conditional.
+                stats['static_size'] = item['static_size'].size
                 with open(LOG_PATH, 'a') as log:
                     item_date = datetime.fromtimestamp(meta['timestamp']).date().isoformat()
                     log.write(f'Processed {count:,} items. Last item processed was from {item_date}\n')
-        storage.attrs['length'] = count
-        storage.attrs['censored'] = stats['censored']
-        storage.attrs['undetermined'] = stats['undetermined']
-        storage.attrs['uncensored'] = stats['uncensored']
+        census_expanded = FreqIter(variable_census)
+        census = np.fromiter(census_expanded, int, count)
+        stats['length'] = count
+        stats['min_text'] = np.min(census)
+        stats['q1_text'] = np.quantile(census, 0.25)
+        stats['median_text'] = np.quantile(census, 0.5)
+        stats['q3_text'] = np.quantile(census, 0.75)
+        stats['max_text'] = np.max(census)
+        for key in stats.keys():
+            storage.attrs[key] = stats[key]
+
     # Report
     with open(LOG_PATH, 'a') as log:
         log.write(f'{count} items in the dataset with the following distribution:\n')

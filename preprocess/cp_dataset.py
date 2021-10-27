@@ -49,6 +49,7 @@ class QuackIterableDataset(Dataset):
         self.__censored = 0
         self.__undetermined = 0
         self.__uncensored = 0
+        self.__max_width = 0
         self.__paths = paths
         self.__path_breakpoints = []
         self.__intermediate_lengths = []
@@ -62,6 +63,11 @@ class QuackIterableDataset(Dataset):
                 self.__censored += storage.attrs['censored']
                 self.__undetermined += storage.attrs['undetermined']
                 self.__uncensored += storage.attrs['uncensored']
+                static_size = storage.attrs['static_size']
+                variable_size = storage.attrs['max_text']
+                width = static_size + variable_size
+                if width > self.__max_width:
+                    self.__max_width = width
                 breakpoint_length += storage.attrs['length']
             self.__path_breakpoints.append(breakpoint_length)
             self.__intermediate_lengths.append(self.__length)
@@ -140,7 +146,6 @@ class QuackIterableDataset(Dataset):
             index = index - self.__intermediate_lengths[path_index - 1]
         return index, path
 
-
     def censored(self) -> int:
         return self.__censored
 
@@ -149,3 +154,6 @@ class QuackIterableDataset(Dataset):
 
     def uncensored(self) -> int:
         return self.__uncensored
+
+    def data_width(self) -> int:
+        return self.__max_width

@@ -6,7 +6,7 @@ from progress.bar import IncrementalBar
 def main():
     # A list of paths to HDF5 files.
     paths = [
-        '/data/2021-07-22-labeled.hdf5'
+
     ]
     dataset = QuackIterableDataset(paths)
     count = 0
@@ -38,6 +38,7 @@ def main():
     assert stats['censored'] == dataset.censored(), f"Dataset should contain{dataset.censored()} censored items but counted {stats['censored']} items"
     assert stats['undetermined'] == dataset.undetermined(), f"Dataset should contain{dataset.undetermined()} censored items but counted {stats['undetermined']} items"
     assert stats['uncensored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
+    assert dataset.data_width() > 0, f"Dataset should contain a functional max width"
 
 
 if __name__ == '__main__':
