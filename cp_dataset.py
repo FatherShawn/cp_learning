@@ -1,8 +1,9 @@
 import h5py
 import numpy as np
 from bisect import bisect_left
+import torch
 from torch.utils.data import Dataset
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Union
 from cp_flatten import TokenizedQuackData
 
 
@@ -31,7 +32,7 @@ class QuackIterableDataset(Dataset):
         See cp_flatten.CensoredPlanetFlatten.__process_row
     """
 
-    def __init__(self, paths: List[str]) -> None:
+    def __init__(self, paths: List[str], tensors=False) -> None:
         """
 
         Parameters
@@ -44,6 +45,8 @@ class QuackIterableDataset(Dataset):
         assert (
                 paths is not None and isinstance(paths, list)
         ), "Must supply a set of file paths as a list"
+        # Store the tensors flag. See __load_item().
+        self.__as_tensors = tensors
         # Initialize parameters:
         self.__length = 0
         self.__censored = 0
@@ -98,7 +101,7 @@ class QuackIterableDataset(Dataset):
     def __len__(self) -> int:
         return self.__length
 
-    def __load_item(self, index: int, storage: h5py.File) -> TokenizedQuackData:
+    def __load_item(self, index: int, storage: h5py.File) -> Union[TokenizedQuackData, torch.Tensor]:
         """
         Loads an item from an HDF5 file based on index value (group name).
 
@@ -114,13 +117,24 @@ class QuackIterableDataset(Dataset):
         group_name = str(index)
         group = storage[group_name]
         if isinstance(group, h5py.Group):
+            # Cast HDF5 datasets to numpy arrays, since Pytorch can create tensors directly from ndarray.
+            dataset = group['static_size'] # type: h5py.Dataset
+            static_size = np.zeros(dataset.shape, dataset.dtype)
+            dataset.read_direct(static_size)
+            dataset = group['variable_text'] # type: h5py.Dataset
+            variable_text = np.zeros(dataset.shape, dataset.dtype)
+            dataset.read_direct(variable_text)
+            # Build metadata dictionary.
             meta = {}
             for key, value in group.attrs.items():
                 meta[key] = value
+            if self.__as_tensors:
+                joined = np.concatenate((static_size, variable_text))
+                return torch.from_numpy(joined)
             return TokenizedQuackData(
                 metadata=meta,
-                static_size=np.array(group['static_size']),
-                variable_text=np.array(group['variable_text'])
+                static_size=static_size,
+                variable_text=variable_text
             )
 
     def __locate_item(self, index: int) -> Tuple[int, str]:
