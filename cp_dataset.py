@@ -1,4 +1,5 @@
 import h5py
+import datetime
 import numpy as np
 from bisect import bisect_left
 import torch
@@ -129,8 +130,33 @@ class QuackIterableDataset(Dataset):
             for key, value in group.attrs.items():
                 meta[key] = value
             if self.__as_tensors:
-                joined = np.concatenate((static_size, variable_text))
-                return torch.from_numpy(joined)
+                # All data falls between July 1, 2021 and July 2, 2022
+                time_floor = datetime.datetime.fromisocalendar(2021, 7, 1).timestamp()
+                time_ceiling = datetime.datetime.fromisocalendar(2022, 7, 1).timestamp()
+                time_max_value = time_ceiling - time_floor
+                variable_text_vocab_size = 250003
+                # Timestamps are the largest range static item.
+                scaling_factor = time_max_value + variable_text_vocab_size
+                # Time values at index 4 & 5.
+                time_values = {4, 5}
+                # Prime the stack of tensor rows with variable text
+                row = np.concatenate((np.zeros(static_size.shape, static_size.dtype), variable_text))
+                row / scaling_factor
+                stack = [torch.from_numpy(row)]
+                empty_text = np.zeros(variable_text.shape, variable_text.dtype)
+                for index in range(static_size.size):
+                    static_value = np.zeros(static_size.shape, static_size.dtype)
+                    # Scale and assign static value to appropriate row cell.
+                    value = static_size[index]
+                    if index in time_values:
+                        value = value - time_floor
+                    # Shift value by vocabulary size to avoid value collisions.
+                    value = value + variable_text_vocab_size
+                    static_value[index] = value
+                    row = np.concatenate((static_value, empty_text))
+                    row / scaling_factor
+                    stack.append(torch.from_numpy(row))
+                return torch.stack(stack)
             return TokenizedQuackData(
                 metadata=meta,
                 static_size=static_size,

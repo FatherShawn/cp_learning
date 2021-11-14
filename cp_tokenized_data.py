@@ -1,14 +1,15 @@
+import torch as pt
 import pytorch_lightning as pl
+import numpy as np
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
-from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import PackedSequence, pad_sequence, pack_padded_sequence
 from cp_dataset import QuackIterableDataset
 from typing import Optional
 
 
-def pad_and_pack(batch: list[Tensor]) -> PackedSequence:
-    lengths = [item.size(0) for item in batch]
+def pad_and_pack(batch: list[pt.Tensor]) -> PackedSequence:
+    lengths = pt.from_numpy(np.fromiter((item.size(0) for item in batch), int))
     batch_padded = pad_sequence(batch, batch_first=True)
     sequence = pack_padded_sequence(batch_padded, lengths=lengths, batch_first=True, enforce_sorted=False)
     return sequence
