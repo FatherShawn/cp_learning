@@ -20,8 +20,8 @@ def main() -> None:
         '/data/labeled/2021-08-25-labeled.hdf5'
     ]
     data = QuackTokenizedDataModule(train_paths, test_paths, batch_size=4)
-    model = QuackAutoEncoder(data_width=data.size(0), encoded_width=8)
-    trainer = Trainer()
+    model = QuackAutoEncoder(data_width=14, encoded_width=8)
+    trainer = Trainer(gpus=1)
     trainer.fit(model, datamodule=data)
 
 

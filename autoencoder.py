@@ -9,8 +9,8 @@ class QuackAutoEncoder(pl.LightningModule):
 
     def __init__(self, data_width: int, encoded_width: int, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.encoder = nn.GRU(input_size=data_width, hidden_size=encoded_width, num_layers=2, batch_first=True)
-        self.decoder = nn.GRU(input_size=encoded_width, hidden_size=data_width, num_layers=2, batch_first=True)
+        self.encoder = nn.GRU(input_size=data_width, hidden_size=encoded_width, num_layers=2, batch_first=True, dtype=torch.double)
+        self.decoder = nn.GRU(input_size=encoded_width, hidden_size=data_width, num_layers=2, batch_first=True, dtype=torch.double)
         self.learning_rate = 1e-3
 
     def forward(self, x) -> torch.Tensor:

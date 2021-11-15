@@ -156,7 +156,7 @@ class QuackIterableDataset(Dataset):
                     row = np.concatenate((static_value, empty_text))
                     row = row / scaling_factor
                     stack.append(torch.from_numpy(row))
-                return torch.stack(stack)
+                return torch.column_stack(stack)
             return TokenizedQuackData(
                 metadata=meta,
                 static_size=static_size,

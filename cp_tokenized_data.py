@@ -32,7 +32,7 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
 
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_and_pack)
+        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_and_pack, num_workers=4)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_and_pack)
+        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_and_pack, num_workers=4)
