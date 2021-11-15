@@ -141,7 +141,7 @@ class QuackIterableDataset(Dataset):
                 time_values = {4, 5}
                 # Prime the stack of tensor rows with variable text
                 row = np.concatenate((np.zeros(static_size.shape, static_size.dtype), variable_text))
-                row / scaling_factor
+                row = row / scaling_factor
                 stack = [torch.from_numpy(row)]
                 empty_text = np.zeros(variable_text.shape, variable_text.dtype)
                 for index in range(static_size.size):
@@ -154,7 +154,7 @@ class QuackIterableDataset(Dataset):
                     value = value + variable_text_vocab_size
                     static_value[index] = value
                     row = np.concatenate((static_value, empty_text))
-                    row / scaling_factor
+                    row = row / scaling_factor
                     stack.append(torch.from_numpy(row))
                 return torch.stack(stack)
             return TokenizedQuackData(
