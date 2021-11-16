@@ -137,26 +137,15 @@ class QuackIterableDataset(Dataset):
                 variable_text_vocab_size = 250003
                 # Timestamps are the largest range static item.
                 scaling_factor = time_max_value + variable_text_vocab_size
-                # Time values at index 4 & 5.
+                # Time values at static_size index 4 & 5.
                 time_values = {4, 5}
-                # Prime the stack of tensor rows with variable text
-                row = np.concatenate((np.zeros(static_size.shape, static_size.dtype), variable_text))
-                row = row / scaling_factor
-                stack = [torch.from_numpy(row)]
-                empty_text = np.zeros(variable_text.shape, variable_text.dtype)
                 for index in range(static_size.size):
-                    static_value = np.zeros(static_size.shape, static_size.dtype)
-                    # Scale and assign static value to appropriate row cell.
-                    value = static_size[index]
                     if index in time_values:
-                        value = value - time_floor
+                        static_size[index] = static_size[index] - time_floor
                     # Shift value by vocabulary size to avoid value collisions.
-                    value = value + variable_text_vocab_size
-                    static_value[index] = value
-                    row = np.concatenate((static_value, empty_text))
-                    row = row / scaling_factor
-                    stack.append(torch.from_numpy(row))
-                return torch.column_stack(stack)
+                    static_size[index] = static_size[index] + variable_text_vocab_size
+                row = np.concatenate((variable_text, static_size))
+                return torch.from_numpy(row / scaling_factor)
             return TokenizedQuackData(
                 metadata=meta,
                 static_size=static_size,
