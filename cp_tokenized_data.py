@@ -23,11 +23,11 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__val_paths = validation_paths
         self.__batch_size = batch_size
         dataset = QuackIterableDataset(self.__train_paths, tensors=True)
+        width = dataset.data_width()
         self.__train_data, self.__test_data = random_split(dataset, [int(len(dataset)*0.8), int(len(dataset)*0.2)])
-        width = self.__train_data.data_width()
         self.__val_data = QuackIterableDataset(self.__val_paths, tensors=True)
-        if self.__test_data.data_width() > width:
-            width = self.__test_data.data_width()
+        if self.__val_data.data_width() > width:
+            width = self.__val_data.data_width()
         self._dims = (width,)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
