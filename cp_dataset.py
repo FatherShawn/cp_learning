@@ -125,10 +125,13 @@ class QuackIterableDataset(Dataset):
             dataset = group['variable_text'] # type: h5py.Dataset
             variable_text = np.zeros(dataset.shape, dataset.dtype)
             dataset.read_direct(variable_text)
+            # Create an "end marker"
+            end = np.full(1, -1, static_size.dtype)
             # Build metadata dictionary.
             meta = {}
             for key, value in group.attrs.items():
                 meta[key] = value
+            # Build the sequence as a tensor, text first.
             if self.__as_tensors:
                 # All data falls between July 1, 2021 and July 2, 2022
                 time_floor = datetime.datetime.fromisocalendar(2021, 7, 1).timestamp()
@@ -145,7 +148,8 @@ class QuackIterableDataset(Dataset):
                     # Shift value by vocabulary size to avoid value collisions.
                     static_size[index] = static_size[index] + variable_text_vocab_size
                 row = np.concatenate((variable_text, static_size))
-                return torch.from_numpy(row / scaling_factor)
+                row = row / scaling_factor
+                return torch.from_numpy(np.concatenate((row, end)))
             return TokenizedQuackData(
                 metadata=meta,
                 static_size=static_size,

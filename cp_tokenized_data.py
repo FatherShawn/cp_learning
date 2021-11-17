@@ -9,6 +9,19 @@ from typing import Optional
 
 
 def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
+    '''
+    Receives a list of Tensors with B elements.  Calculates the widest tensor, sorting the longest length T. Pads all
+    narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
+
+    Parameters
+    ----------
+    batch: list[pt.Tensor]
+        A list of tensors in the batch.
+
+    Returns
+    -------
+    pt.Tensor
+    '''
     lengths = np.fromiter((item.size(0) for item in batch), int)
     max_length = np.max(lengths)
     batch_padded = [F.pad(item, (0, max_length - item.size(0)), value=0) for item in batch]
@@ -24,7 +37,9 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__batch_size = batch_size
         dataset = QuackIterableDataset(self.__train_paths, tensors=True)
         width = dataset.data_width()
-        self.__train_data, self.__test_data = random_split(dataset, [int(len(dataset)*0.8), int(len(dataset)*0.2)])
+        # Reserve 20% of the data as test data.
+        test_reserve = int(len(dataset)*0.2)
+        self.__train_data, self.__test_data = random_split(dataset, [len(dataset) - test_reserve, test_reserve])
         self.__val_data = QuackIterableDataset(self.__val_paths, tensors=True)
         if self.__val_data.data_width() > width:
             width = self.__val_data.data_width()
