@@ -5,12 +5,13 @@ from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADER
 from torch.utils.data import DataLoader, random_split
 from torch.nn import functional as F
 from cp_dataset import QuackIterableDataset
+from cp_flatten import QuackConstants
 from typing import Optional
 
 
 def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
     '''
-    Receives a list of Tensors with B elements.  Calculates the widest tensor, sorting the longest length T. Pads all
+    Receives a list of Tensors with B elements.  Calculates the widest tensor, which is length T. Pads all
     narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
 
     Parameters
@@ -24,7 +25,7 @@ def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
     '''
     lengths = np.fromiter((item.size(0) for item in batch), int)
     max_length = np.max(lengths)
-    batch_padded = [F.pad(item, (0, max_length - item.size(0)), value=0) for item in batch]
+    batch_padded = [F.pad(item, (0, max_length - item.size(0)), value=QuackConstants.XLMR_PAD.value) for item in batch]
     return pt.stack(batch_padded)
 
 

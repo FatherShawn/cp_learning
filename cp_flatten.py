@@ -2,13 +2,12 @@ import json
 import tarfile
 import re
 import logging
-import torch
 import geoip2.database
 import geoip2.errors
 import numpy
+from enum import Enum
 from torch.utils.data.dataset import T_co
 from blockpage import BlockpageMatcher
-from collections import defaultdict
 from dateutil.parser import isoparse
 from fairseq.models.roberta import XLMRModel
 from io import BufferedReader
@@ -17,20 +16,29 @@ from typing import Any, Callable, Dict, Iterator, Set, Tuple, TypedDict, Union
 from urlextract import URLExtract
 from webdataset import ShardList, Shorthands, tariterators, url_opener
 
-# Constants
 
-SATELLITE_TAGS = {'ip', 'http', 'asnum', 'asname', 'cert'}
-INTERFERENCE_IPDOMAIN: Dict[str, Set[str]] = defaultdict(set)
+class QuackConstants(Enum):
+    """
+    An Enum to contain constants used in this project.
+    """
 
-# For Hyperquack v1
-# echo/discard domain and url content
-SENT_PATTERN = "GET (.*) HTTP/1.1\r\nHost: (.*)\r\n"
+    # For Hyperquack v1
+    # echo/discard domain and url content
+    SENT_PATTERN = "GET (.*) HTTP/1.1\r\nHost: (.*)\r\n"  # type: str
 
-# For Hyperquack v1
-CONTROL_URLS = [
-    'example5718349450314.com',  # echo/discard
-    'rtyutgyhefdafioasfjhjhi.com'  # HTTP/S
-]
+    # For Hyperquack v1
+    CONTROL_URLS = [
+        'example5718349450314.com',  # echo/discard
+        'rtyutgyhefdafioasfjhjhi.com'  # HTTP/S
+    ]  # type: list[str]
+    # XLM-R reports vocabulary dictionary size on load:
+    XLMR_VOCAB = 250001
+    # XLM-R uses 1 as the token for <pad>.
+    XLMR_PAD = 1.0  # type: float
+    # All data falls after July 1, 2021:
+    TIME_FLOOR = isoparse('2021-07-01').timestamp()  # type: float
+    # All data falls within a single year:;;
+    TIME_CEILING = isoparse('2022-07-01').timestamp()  # type: float
 
 class Row(TypedDict):
     """
@@ -240,7 +248,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         for index, result in enumerate(scan.get('Results', [])):
             domain = self.__extract_domain_from_sent_field(result['Sent'])
-            is_control = domain in CONTROL_URLS
+            is_control = domain in QuackConstants.CONTROL_URLS.value
             # Due to a bug the sent field sometimes isn't populated
             # when the measurement failed due to network timeout.
             if not domain:
@@ -463,7 +471,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         if sent == '':
             return sent
 
-        match = re.search(SENT_PATTERN, sent)
+        match = re.search(QuackConstants.SENT_PATTERN.value, sent)
         if match:
             path = match.group(1)
             domain = match.group(2)

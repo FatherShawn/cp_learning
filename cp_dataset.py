@@ -5,7 +5,7 @@ from bisect import bisect_left
 import torch
 from torch.utils.data import Dataset
 from typing import Iterator, List, Tuple, Union
-from cp_flatten import TokenizedQuackData
+from cp_flatten import TokenizedQuackData, QuackConstants
 
 
 class QuackIterableDataset(Dataset):
@@ -125,31 +125,25 @@ class QuackIterableDataset(Dataset):
             dataset = group['variable_text'] # type: h5py.Dataset
             variable_text = np.zeros(dataset.shape, dataset.dtype)
             dataset.read_direct(variable_text)
-            # Create an "end marker"
-            end = np.full(1, -1, static_size.dtype)
+            # Create an "start marker" XLM-R uses 0, so will we.
+            start = np.zeros(1, static_size.dtype)
+            # Create an "end marker" XLM-R uses 2, so will we.
+            end = np.full(1, 2, static_size.dtype)
             # Build metadata dictionary.
             meta = {}
             for key, value in group.attrs.items():
                 meta[key] = value
             # Build the sequence as a tensor, text first.
             if self.__as_tensors:
-                # All data falls between July 1, 2021 and July 2, 2022
-                time_floor = datetime.datetime.fromisocalendar(2021, 7, 1).timestamp()
-                time_ceiling = datetime.datetime.fromisocalendar(2022, 7, 1).timestamp()
-                time_max_value = time_ceiling - time_floor
-                variable_text_vocab_size = 250003
-                # Timestamps are the largest range static item.
-                scaling_factor = time_max_value + variable_text_vocab_size
                 # Time values at static_size index 4 & 5.
                 time_values = {4, 5}
                 for index in range(static_size.size):
                     if index in time_values:
-                        static_size[index] = static_size[index] - time_floor
+                        static_size[index] = static_size[index] - QuackConstants.TIME_FLOOR.value
                     # Shift value by vocabulary size to avoid value collisions.
-                    static_size[index] = static_size[index] + variable_text_vocab_size
-                row = np.concatenate((variable_text, static_size))
-                row = row / scaling_factor
-                return torch.from_numpy(np.concatenate((row, end)))
+                    static_size[index] = static_size[index] + QuackConstants.XLMR_VOCAB.value
+                row = np.concatenate((variable_text, start, static_size, end))
+                return torch.from_numpy(row)
             return TokenizedQuackData(
                 metadata=meta,
                 static_size=static_size,
