@@ -1,4 +1,4 @@
-
+from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder
 from pytorch_lightning import Trainer
@@ -12,16 +12,18 @@ def main() -> None:
         '/data/unlabeled/2021-10-13.hdf5',
         '/data/unlabeled/2021-10-14.hdf5'
     ]
-    test_paths = [
+    validation_paths = [
         '/data/labeled/2021-08-04-labeled.hdf5',
         '/data/labeled/2021-08-08-labeled.hdf5',
         '/data/labeled/2021-08-11-labeled.hdf5',
         '/data/labeled/2021-08-16-labeled.hdf5',
         '/data/labeled/2021-08-25-labeled.hdf5'
     ]
-    data = QuackTokenizedDataModule(train_paths, test_paths, batch_size=4)
-    model = QuackAutoEncoder(data_width=14, encoded_width=8)
-    trainer = Trainer(gpus=1)
+    data = QuackTokenizedDataModule(train_paths, validation_paths, batch_size=128)
+    # HTTP default timeout is 60 seconds = 60000 milliseconds
+    max_index = 60000 + QuackConstants.XLMR_VOCAB.value
+    model = QuackAutoEncoder(num_embeddings=max_index, embed_size=128, hidden_size=512, max_decode_length=data.get_width())
+    trainer = Trainer()
     trainer.fit(model, datamodule=data)
 
 

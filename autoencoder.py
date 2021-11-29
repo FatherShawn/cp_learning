@@ -95,7 +95,7 @@ class QuackAutoEncoder(pl.LightningModule):
         self.__embed = nn.Embedding(num_embeddings, embed_size, padding_idx=int(QuackConstants.XLMR_PAD.value))
         # We will use a bi-directional GRU so hidden size is divided by 2.
         self.__encoder = nn.GRU(input_size=embed_size, hidden_size=hidden_size // 2, num_layers=layers,
-                                batch_first=True, bidirectional=True, dtype=pt.double)
+                                batch_first=True, bidirectional=True)
         # Decoder is uni-directional, and uses GRUCell.
         self.__decoder = nn.ModuleList(
             [nn.GRUCell(embed_size, hidden_size)]
@@ -114,6 +114,7 @@ class QuackAutoEncoder(pl.LightningModule):
         # An attention network
         self.__attention = AttentionModule()
         self.__attention_score = AttentionScore(hidden_size)
+
 
     def mask_input(self, padded_input: pt.Tensor) -> pt.Tensor:
         """
@@ -157,21 +158,23 @@ class QuackAutoEncoder(pl.LightningModule):
         lengths = mask.sum(dim=1).view(-1)  # Shape (B).
         # Transform to an Embed.
         x_embed = self.__embed(x) # Shape (B, T, D) which is what GRU expects.
+        # GRU efficiency is increased with a PackedSequence object.
         x_packed = pack_padded_sequence(x_embed, lengths.cpu(), batch_first=True, enforce_sorted=False)
-        x_encoded, last_h = self.__encoder(x_packed)
-        x_encoded, _ = pad_packed_sequence(x_encoded) # x_encoded has shape (B, T, 2, D/2) since the GRU is bidirectional.
-        x_encoded = x_encoded.view(batch_dim, temporal_dim, -1)  # x_encoded shape is now (B, T, D)
-        hidden_size = x_encoded.size(2)
+        encoded_sequence, last_h = self.__encoder(x_packed)
+        encoded_sequence, _ = pad_packed_sequence(encoded_sequence)
+        # encoded_sequence has shape (B, T, 2, D/2) since the GRU is bidirectional.
+        encoded_sequence = encoded_sequence.view(batch_dim, temporal_dim, -1)  # encoded_sequence shape is now (B, T, D)
+        hidden_size = encoded_sequence.size(2)
         last_h = last_h.view(-1, 2, batch_dim, hidden_size//2)[-1, :, :, :]  # last_h shape is now (2, B, D/2)
         last_h = last_h.permute(1, 0, 2).reshape(batch_dim, -1)  # last_h shape is now (B, D)
-        return last_h, x_encoded
+        return last_h, encoded_sequence
 
     def _common_step(self, x: pt.Tensor, batch_index: int, step_id: str) -> pt.Tensor:
-        z = self.__encoder(x)
-        x_hat = self.__decoder(z)
-        loss = F.mse_loss(x_hat, x)
-        self.log(f"{step_id}_loss", loss)
-        return loss
+        final_state, sequence = self.forward(x)
+        # x_hat = self.__decoder(z)
+        # loss = F.mse_loss(x_hat, x)
+        # self.log(f"{step_id}_loss", loss)
+        # return loss
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> pt.Tensor:
         return self._common_step(x, batch_index, 'train')

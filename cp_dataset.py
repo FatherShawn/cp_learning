@@ -120,33 +120,37 @@ class QuackIterableDataset(Dataset):
         if isinstance(group, h5py.Group):
             # Cast HDF5 datasets to numpy arrays, since Pytorch can create tensors directly from ndarray.
             dataset = group['static_size'] # type: h5py.Dataset
-            static_size = np.zeros(dataset.shape, dataset.dtype)
-            dataset.read_direct(static_size)
+            static_source = np.zeros(dataset.shape, dataset.dtype)
+            static_size = []
+            dataset.read_direct(static_source)
             dataset = group['variable_text'] # type: h5py.Dataset
             variable_text = np.zeros(dataset.shape, dataset.dtype)
             dataset.read_direct(variable_text)
             # Create an "start marker" XLM-R uses 0, so will we.
-            start = np.zeros(1, static_size.dtype)
+            start = np.zeros(1, static_source.dtype)
             # Create an "end marker" XLM-R uses 2, so will we.
-            end = np.full(1, 2, static_size.dtype)
+            end = np.full(1, 2, static_source.dtype)
             # Build metadata dictionary.
             meta = {}
             for key, value in group.attrs.items():
                 meta[key] = value
             # Build the sequence as a tensor, text first.
             if self.__as_tensors:
-                # Time values at static_size index 4 & 5.
-                time_values = {4, 5}
-                for index in range(static_size.size):
+                # Time values at static_source index 8 & 9.
+                time_values = {8, 9}
+                for index in range(static_source.size):
                     if index in time_values:
-                        static_size[index] = static_size[index] - QuackConstants.TIME_FLOOR.value
+                       continue
                     # Shift value by vocabulary size to avoid value collisions.
-                    static_size[index] = static_size[index] + QuackConstants.XLMR_VOCAB.value
-                row = np.concatenate((variable_text, start, static_size, end))
+                    static_size.append(int(static_source[index] + QuackConstants.XLMR_VOCAB.value))
+                # Now deal with time by finding the difference in milliseconds.
+                time_diff = round((static_source[9] - static_source[8]) * 1000)
+                static_size.append(time_diff + QuackConstants.XLMR_VOCAB.value)
+                row = np.concatenate((variable_text, start, np.array(static_size), end), dtype=static_source.dtype).astype(np.int_)
                 return torch.from_numpy(row)
             return TokenizedQuackData(
                 metadata=meta,
-                static_size=static_size,
+                static_size=static_source,
                 variable_text=variable_text
             )
 

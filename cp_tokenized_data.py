@@ -44,17 +44,19 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__val_data = QuackIterableDataset(self.__val_paths, tensors=True)
         if self.__val_data.data_width() > width:
             width = self.__val_data.data_width()
-        self._dims = (width,)
+        self.__width = width
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=4)
+        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=4)
+        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right)
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=4)
+        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right)
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass
 
+    def get_width(self):
+        return self.__width
