@@ -34,7 +34,7 @@ class QuackConstants(Enum):
     # XLM-R reports vocabulary dictionary size on load:
     XLMR_VOCAB = 250001
     # XLM-R uses 1 as the token for <pad>.
-    XLMR_PAD = 1.0  # type: float
+    XLMR_PAD = 1  # type: int
     # All data falls after July 1, 2021:
     TIME_FLOOR = isoparse('2021-07-01').timestamp()  # type: float
     # All data falls within a single year:;;

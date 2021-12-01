@@ -1,5 +1,4 @@
 from typing import Any
-import torch
 import torch as pt
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -130,9 +129,34 @@ class QuackAutoEncoder(pl.LightningModule):
             A boolean tensor (B, T).  True indicates the value at that time is usable, not fill.
 
         """
-        with torch.no_grad():
+        with pt.no_grad():
             mask = padded_input.ne(QuackConstants.XLMR_PAD.value)
         return mask
+
+    def loss_over_time(self, original: pt.Tensor, output: pt.Tensor) -> float:
+        """
+        Sum losses over time dimension, comparing original tokens and predicted tokens.
+
+        Parameters
+        ----------
+        original: pt.Tensor
+          The original input
+        output: pt.Tensor
+          The predicted output
+
+        Returns
+        -------
+        float
+          The aggregated loss.
+
+        """
+        cross_entropy = nn.CrossEntropyLoss(ignore_index=QuackConstants.XLMR_PAD.value)
+        max_time = min(original.size(1), output.size(1))  # T
+        loss = 0.0
+        for time in range(max_time):
+            loss += cross_entropy(output[:, time], original[:, time])
+        return loss
+
 
     def forward(self, x: pt.Tensor) -> tuple[pt.Tensor, pt.Tensor]:
         """
@@ -169,20 +193,62 @@ class QuackAutoEncoder(pl.LightningModule):
         last_h = last_h.permute(1, 0, 2).reshape(batch_dim, -1)  # last_h shape is now (B, D)
         return last_h, encoded_sequence
 
-    def _common_step(self, x: pt.Tensor, batch_index: int, step_id: str) -> pt.Tensor:
+    def _common_step(self, x: pt.Tensor, batch_index: int, step_id: str) -> float:
         final_state, sequence = self.forward(x)
-        # x_hat = self.__decoder(z)
-        # loss = F.mse_loss(x_hat, x)
-        # self.log(f"{step_id}_loss", loss)
-        # return loss
 
-    def training_step(self, x: pt.Tensor, batch_index: int) -> pt.Tensor:
+        # Now add the decoder part.
+        decoder_depth = len(self.__decoder)
+        # We will stack the predictions at the end.
+        all_predictions = []
+        # First, replicate the initial hidden state for each cell in the decoder.
+        hidden_priors = [final_state for cell in range(decoder_depth)]
+        # Prime the value of decoder input for the first iteration of the decoding loop.
+        mask = self.mask_input(x)
+        lengths = mask.sum(dim=1).view(-1)  # Shape (B).
+        decoder_input = self.__embed(x.gather(1, lengths.view(-1, 1)-1).flatten()) #(B, D)
+        # Calculate decoding steps:
+        temporal_dim = x.size(1)  # T
+        steps = min(self.__max_decode_length, temporal_dim)
+        # Do we use teacher forcing (true) or auto-regressive (false)
+        teacher_forcing = np.random.choice((True, False))
+        for time in range(steps):
+            x_in = decoder_input #(B, D)
+
+            for layer in range(decoder_depth):
+                hidden_prior = hidden_priors[layer]
+                # Process through the decoder cells and store the result
+                h = self.__decoder[layer](x_in, hidden_prior)
+                hidden_priors[layer] = h
+                x_in = h
+            hidden_decoder = x_in  # (B, D), we now have the hidden state for the decoder at this time step.
+
+            # Now we apply attention.
+            scores = self.__attention_score(sequence, hidden_decoder)
+            context, weights = self.__attention(sequence, scores, mask)
+            # Now we use the prediction network to get the next predicted token in the decoding.
+            prediction_input = pt.cat((context, hidden_decoder), dim=1)  # (B, D) + (B, D)  -> (B, 2*D)
+            token_prediction = self.__predict_word(prediction_input)  # (B, 2*D) -> (B, V)
+            all_predictions.append(token_prediction)
+            # Now select the input of the next time step.  No gradient on the input tokens.
+            with pt.no_grad():
+                if teacher_forcing:
+                    next_words = x[:, time].squeeze()
+                else:
+                    # Sample the next token based on the predictions made
+                    next_words = pt.multinomial(F.softmax(token_prediction, dim=1), 1)[:, -1]
+            decoder_input = self.__embed(next_words)
+        predicted_batch = pt.stack(all_predictions, dim=1)
+        loss = self.loss_over_time(x, predicted_batch)
+        self.log(f"{step_id}_loss", loss)
+        return loss
+
+    def training_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'train')
 
-    def validation_step(self, x: pt.Tensor, batch_index: int) -> pt.Tensor:
+    def validation_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'val')
 
-    def test_step(self, x: pt.Tensor, batch_index: int) -> pt.Tensor:
+    def test_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'test')
 
     def configure_optimizers(self) -> pt.optim.Optimizer:
