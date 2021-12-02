@@ -47,13 +47,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__width = width
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right)
+        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right)
+        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True)
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right)
+        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True)
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass

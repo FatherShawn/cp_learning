@@ -242,8 +242,8 @@ class QuackAutoEncoder(pl.LightningModule):
         self.log(f"{step_id}_loss", loss)
         return loss
 
-    def training_step(self, x: pt.Tensor, batch_index: int) -> float:
-        return self._common_step(x, batch_index, 'train')
+    def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        return {'loss': self._common_step(x, batch_index, 'train')}
 
     def validation_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'val')

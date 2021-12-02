@@ -20,11 +20,10 @@ def main() -> None:
         '/data/labeled/2021-08-25-labeled.hdf5'
     ]
     data = QuackTokenizedDataModule(train_paths, validation_paths, batch_size=2)
-    # HTTP default timeout is 60 seconds = 60000 milliseconds
-    max_index = 60000 + QuackConstants.XLMR_VOCAB.value
+    # Max time difference determined by data analysis.
+    max_index = 131300 + QuackConstants.XLMR_VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=128, hidden_size=512, max_decode_length=data.get_width())
-    #trainer = Trainer(gpus=1)
-    trainer = Trainer()
+    trainer = Trainer(gpus=1, precision=16)
     trainer.fit(model, datamodule=data)
 
 
