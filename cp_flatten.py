@@ -4,7 +4,8 @@ import re
 import logging
 import geoip2.database
 import geoip2.errors
-import numpy
+import numpy as np
+import pickle
 from enum import Enum
 from torch.utils.data.dataset import T_co
 from blockpage import BlockpageMatcher
@@ -31,14 +32,15 @@ class QuackConstants(Enum):
         'example5718349450314.com',  # echo/discard
         'rtyutgyhefdafioasfjhjhi.com'  # HTTP/S
     ]  # type: list[str]
-    # XLM-R reports vocabulary dictionary size on load:
-    XLMR_VOCAB = 250001
+    # Re-mapped XLMR tokens in use to a smaller vocab:
+    VOCAB = 6744
     # XLM-R uses 1 as the token for <pad>.
     XLMR_PAD = 1  # type: int
     # All data falls after July 1, 2021:
     TIME_FLOOR = isoparse('2021-07-01').timestamp()  # type: float
-    # All data falls within a single year:;;
+    # All data falls within a single year:
     TIME_CEILING = isoparse('2022-07-01').timestamp()  # type: float
+
 
 class Row(TypedDict):
     """
@@ -68,10 +70,12 @@ class Row(TypedDict):
     received_headers: str
     received_body: str
 
+
 class TokenizedQuackData(TypedDict):
     metadata: dict
-    static_size: numpy.ndarray
-    variable_text: numpy.ndarray
+    static_size: np.ndarray
+    variable_text: np.ndarray
+
 
 class CensoredPlanetFlatten(IterableDataset, Shorthands):
     """
@@ -102,7 +106,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         pass
 
-    def __init__(self, urls: Union[str, list[str]], labeled: bool = False, anomalies: bool = False) -> None:
+    def __init__(self, urls: Union[str, list[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False) -> None:
         super().__init__()
 
         assert (
@@ -112,12 +116,18 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__shards = ShardList(urls)
         self.__blockpage_matcher = BlockpageMatcher()
         self.__labeled = labeled
+        self.__compare = labeled or compare
         self.__anomalies = anomalies
         # Bring in the MMDB free database.
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
         # Bring in the pretrained XLMR model.
         self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
         self.__xlmr.eval()
+        self.__vocab_path = vocab_path
+        with open(vocab_path, 'rb') as retrieved_dict:
+            self.__vocab = pickle.load(retrieved_dict)
+        self.__vocab_next = len(self.__vocab)
+
 
     def __iter__(self) -> Iterator[TokenizedQuackData]:
         for quack_file in url_opener(self.__shards):
@@ -159,6 +169,10 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                         iterate_lines = False
                     except Exception as exn:
                         tariterators.reraise_exception(exn)
+        # Save the xlmr -> vocab token mapping:
+        with open(self.__vocab_path, 'wb') as stored_dict:
+            pickle.dump(self.__vocab, stored_dict)
+        print(f"All items flattened.  Re-mapped vocabulary has {len(self.__vocab)} items.")
 
 
     # Utility iterators to keep __iter__ readable.
@@ -271,10 +285,13 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_fields = self.__parse_received_data(received)
                 # Calculate censorship if required
                 matches_blockpage = 0
-                if self.__labeled and result['Success'] and not scan['Blocked']:
+                if self.__compare and result['Success'] and not scan['Blocked']:
                     matches_blockpage = -1
-                elif self.__labeled and len(received_fields['received_body']) > 0:
+                elif self.__compare and len(received_fields['received_body']) > 0:
                     matches_blockpage = self.__blockpage_match(received_fields['received_body'])
+                # If we only want labeled data and censorship is still undetermined, continue to the next row.
+                if matches_blockpage == 0 and self.__labeled:
+                    continue
             except KeyError:
                 # There's something out of spec with this item.
                 continue
@@ -341,13 +358,13 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_fields = self.__parse_received_data(received)
                 matches_blockpage = 0
                 # Calculate censorship if required
-                if self.__labeled:
+                if self.__compare:
                     if response['matches_template'] and not scan['anomaly']:
                         matches_blockpage = -1
                     elif len(received_fields['received_body']) > 0:
                         matches_blockpage = self.__blockpage_match(received_fields['received_body'])
                     # If we only want labeled data and censorship is still undetermined, continue to the next row.
-                    if matches_blockpage == 0:
+                    if matches_blockpage == 0 and self.__labeled:
                         continue
             except KeyError:
                 # There's something out of spec with this item.
@@ -439,11 +456,21 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         # Concatenate the strings.
         for key in text_keys:
             concatenated += row[key]
-        encoded = self.__xlmr.encode(concatenated) # Type: torch.Tensor
+        encoded = self.__xlmr.encode(concatenated).numpy()  # Type: np.ndarray
+        # We keep a map of xlmr tokens actually used to reduce the scale of our models.
+        mapped = np.zeros(encoded.shape, dtype=encoded.dtype)
+        for index, value in enumerate(encoded):
+            try:
+                token = self.__vocab[value]
+            except KeyError:
+                token = self.__vocab_next
+                self.__vocab[value] = self.__vocab_next
+                self.__vocab_next += 1
+            mapped[index] = token
         meta_tensor = TokenizedQuackData(
             metadata=metadata,
-            static_size=numpy.array(static_dimension),
-            variable_text=encoded.numpy()
+            static_size=np.array(static_dimension),
+            variable_text=mapped
         )
         return meta_tensor
 

@@ -142,10 +142,10 @@ class QuackIterableDataset(Dataset):
                     if index in time_values:
                        continue
                     # Shift value by vocabulary size to avoid value collisions.
-                    static_size.append(int(static_source[index] + QuackConstants.XLMR_VOCAB.value))
+                    static_size.append(int(static_source[index] + QuackConstants.VOCAB.value))
                 # Now deal with time by finding the difference in milliseconds.
                 time_diff = round((static_source[9] - static_source[8]) * 1000)
-                static_size.append(time_diff + QuackConstants.XLMR_VOCAB.value)
+                static_size.append(time_diff + QuackConstants.VOCAB.value)
                 row = np.concatenate((variable_text, start, np.array(static_size), end), dtype=static_source.dtype).astype(np.int_)
                 return torch.from_numpy(row)
             return TokenizedQuackData(

@@ -3,8 +3,9 @@ import h5py
 from datetime import datetime
 import numpy as np
 
-STORAGE_PATH = ''
-LOG_PATH = ''
+STORAGE_PATH = '/data/labeled/2021-08-25-labeled.hdf5'
+LOG_PATH = '/home/shawn/censored-planet/remap.txt'
+VOCAB_PATH = '/data/vocab_map.pyc'
 
 
 class FreqIter:
@@ -37,9 +38,9 @@ def main() -> None:
     time is to be processed, place only one item in the list.
     """
     urls = [
-
+        '/data/quack/CP_Quack-echo-2021-08-25-01-01-01.tar.gz'
     ]
-    dataset = CensoredPlanetFlatten(urls, False, True)
+    dataset = CensoredPlanetFlatten(urls, VOCAB_PATH, True, True, True)
     count = 0
     variable_census = {}
     stats = {
