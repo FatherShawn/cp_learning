@@ -7,6 +7,7 @@ from cp_flatten import QuackConstants
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
+
 class QuackLatentClassifier(pl.LightningModule):
 
     def __init__(self, initial_size: int, *args: Any, **kwargs: Any) -> None:
@@ -21,17 +22,21 @@ class QuackLatentClassifier(pl.LightningModule):
             nn.LeakyReLU(leak_rate),
             nn.Linear(initial_size // 8, initial_size // 1),
         )
+        self.__loss_module = nn.BCEWithLogitsLoss()
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         return self.__model(x)
 
     def _common_step(self, data: Tuple[pt.Tensor, int], batch_index: int, step_id: str) -> float:
-        value, label = data
-        prediction = self.forward(value)
+        values, labels = data
+        prediction = self.forward(values)  # Shape (B, 1)
+        prediction = prediction.squeeze(dim=1)  # Shape (B)
+        loss = self.__loss_module(prediction, labels)
+        self.log(f"{step_id}_loss", loss)
+        return loss
 
-
-    def training_step(self, x: pt.Tensor, batch_index: int) -> float:
-        return self._common_step(x, batch_index, 'train')
+    def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        return {'loss': self._common_step(x, batch_index, 'train')}
 
     def validation_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'val')
@@ -40,4 +45,4 @@ class QuackLatentClassifier(pl.LightningModule):
         return self._common_step(x, batch_index, 'test')
 
     def configure_optimizers(self) -> pt.optim.Optimizer:
-        return pt.optim.AdamW(self.parameters(), lr=self.__learning_rate)
+        return pt.optim.SGD(self.__model.parameters(), momentum=0.9, lr=self.__learning_rate)
