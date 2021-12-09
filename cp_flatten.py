@@ -33,7 +33,7 @@ class QuackConstants(Enum):
         'rtyutgyhefdafioasfjhjhi.com'  # HTTP/S
     ]  # type: list[str]
     # Re-mapped XLMR tokens in use to a smaller vocab:
-    VOCAB = 6744
+    VOCAB = 6813
     # XLM-R uses 1 as the token for <pad>.
     XLMR_PAD = 1  # type: int
     # All data falls after July 1, 2021:

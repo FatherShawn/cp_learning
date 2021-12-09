@@ -30,10 +30,11 @@ def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
 
 
 class QuackTokenizedDataModule(pl.LightningDataModule):
-    def __init__(self, data_paths: list, batch_size: int = 64, train_transforms=None,
+    def __init__(self, data_paths: list, batch_size: int = 64, workers: int = 0, train_transforms=None,
                  val_transforms=None, test_transforms=None, dims=None):
         super().__init__(train_transforms, val_transforms, test_transforms, dims)
         self.__batch_size = batch_size
+        self.__workers = workers
         dataset = QuackIterableDataset(data_paths, tensors=True)
         self.__width = dataset.data_width()
         # Reserve 20% of the data as test data.
@@ -45,13 +46,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True)
+        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True, num_workers=self.__workers)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right)
+        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=self.__workers)
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right)
+        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=self.__workers)
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
         pass

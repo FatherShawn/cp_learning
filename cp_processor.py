@@ -1,11 +1,8 @@
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
 import h5py
 from datetime import datetime
+from argparse import ArgumentParser
 import numpy as np
-
-STORAGE_PATH = '/data/labeled/2021-08-25-labeled.hdf5'
-LOG_PATH = '/home/shawn/censored-planet/remap.txt'
-VOCAB_PATH = '/data/vocab_map.pyc'
 
 
 class FreqIter:
@@ -34,13 +31,21 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     """
-    Create a list of file paths or urls to process.  The webdataset library expects a list, so if a single file at a
-    time is to be processed, place only one item in the list.
+    Create a list of file paths or urls to process.  The webdataset library expects a list,
+    so we place only one item in the list.
     """
+    # Add args to make a more flexible cli tool.
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('--source_path', type=str, required=True)
+    arg_parser.add_argument('--storage_path', type=str, required=True)
+    arg_parser.add_argument('--log_path', type=str, required=True)
+    arg_parser.add_argument('--vocab_path', type=str, required=True)
+    args = arg_parser.parse_args()
+
     urls = [
-        '/data/quack/CP_Quack-echo-2021-08-25-01-01-01.tar.gz'
+        args.source_path
     ]
-    dataset = CensoredPlanetFlatten(urls, VOCAB_PATH, True, True, True)
+    dataset = CensoredPlanetFlatten(urls, args.vocab_path, True, True, True)
     count = 0
     variable_census = {}
     stats = {
@@ -55,7 +60,7 @@ def main() -> None:
         'q3_text': 0,
         'max_text': 0
     }
-    with h5py.File(STORAGE_PATH, 'w') as storage:
+    with h5py.File(args.storage_path, 'w') as storage:
         for item in dataset:
             # Validate:
             meta = item['metadata']
@@ -84,7 +89,7 @@ def main() -> None:
             if count % 100000 == 0:
                 # Really only need to store this once, but this is better than another conditional.
                 stats['static_size'] = item['static_size'].size
-                with open(LOG_PATH, 'a') as log:
+                with open(args.log_path, 'a') as log:
                     item_date = datetime.fromtimestamp(meta['timestamp']).date().isoformat()
                     log.write(f'Processed {count:,} items. Last item processed was from {item_date}\n')
         census_expanded = FreqIter(variable_census)
@@ -99,7 +104,7 @@ def main() -> None:
             storage.attrs[key] = stats[key]
 
     # Report
-    with open(LOG_PATH, 'a') as log:
+    with open(args.log_path, 'a') as log:
         log.write(f'{count} items in the dataset with the following distribution:\n')
         for key, value in stats.items():
             log.write(f'{key}: {value}\n')

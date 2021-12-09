@@ -1,12 +1,22 @@
+from argparse import ArgumentParser
 from cp_dataset import QuackIterableDataset
 from cp_processor import verify_returned_item
 from progress.bar import IncrementalBar
 
 
 def main():
+    # Add args to make a more flexible cli tool.
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('--data_dir', type=str, default='/data')
+    args = arg_parser.parse_args()
     # A list of paths to HDF5 files.
     paths = [
-
+        args.data_dir + '2021-08-04-labeled.hdf5',
+        args.data_dir + '2021-08-26-labeled.hdf5',
+        args.data_dir + '2021-08-25-labeled.hdf5',
+        args.data_dir + '2021-08-08-labeled.hdf5',
+        args.data_dir + '2021-08-16-labeled.hdf5',
+        args.data_dir + '2021-10-13-unlabled.hdf5'
     ]
     dataset = QuackIterableDataset(paths)
     count = 0
