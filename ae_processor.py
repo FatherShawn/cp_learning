@@ -2,7 +2,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder
 from pytorch_lightning import Trainer
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 
 
 def main() -> None:
@@ -13,7 +13,9 @@ def main() -> None:
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
-    arg_parser.add_argument('--limit_training', type=float, default=1.0)
+    arg_parser.add_argument('--tune', action=BooleanOptionalAction)
+    # add trainer args (gpus=x, precision=...)
+    arg_parser = Trainer.add_argparse_args(arg_parser)
     args = arg_parser.parse_args()
     # A list of paths to HDF5 files.
     data_paths = [
@@ -28,8 +30,12 @@ def main() -> None:
     # Max time difference determined by data analysis.
     max_index = 131300 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
-    trainer = Trainer(limit_train_batches=0.05)
-    trainer.fit(model, datamodule=data)
+    if args.tune:
+        trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
+        trainer.tune(model, datamodule=data)
+    else:
+        trainer = Trainer.from_argparse_args(args, precision=16)
+        trainer.fit(model, datamodule=data)
 
 
 if __name__ == '__main__':

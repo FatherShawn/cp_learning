@@ -113,6 +113,8 @@ class QuackAutoEncoder(pl.LightningModule):
         # An attention network
         self.__attention = AttentionModule()
         self.__attention_score = AttentionScore(hidden_size)
+        # For tuning.
+        self.batch_size = 2
 
 
     def mask_input(self, padded_input: pt.Tensor) -> pt.Tensor:
