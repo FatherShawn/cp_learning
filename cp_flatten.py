@@ -13,7 +13,7 @@ from dateutil.parser import isoparse
 from fairseq.models.roberta import XLMRModel
 from io import BufferedReader
 from torch.utils.data import IterableDataset
-from typing import Any, Callable, Dict, Iterator, Set, Tuple, TypedDict, Union
+from typing import Any, Callable, Dict, Iterator, Set, Tuple, TypedDict, Union, List
 from urlextract import URLExtract
 from webdataset import ShardList, Shorthands, tariterators, url_opener
 
@@ -106,7 +106,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         pass
 
-    def __init__(self, urls: Union[str, list[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False) -> None:
+    def __init__(self, urls: Union[str, List[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False) -> None:
         super().__init__()
 
         assert (
