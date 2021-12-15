@@ -9,16 +9,7 @@ def main():
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--data_dir', type=str, default='/data')
     args = arg_parser.parse_args()
-    # A list of paths to HDF5 files.
-    paths = [
-        args.data_dir + '2021-08-04-labeled.hdf5',
-        args.data_dir + '2021-08-26-labeled.hdf5',
-        args.data_dir + '2021-08-25-labeled.hdf5',
-        args.data_dir + '2021-08-08-labeled.hdf5',
-        args.data_dir + '2021-08-16-labeled.hdf5',
-        args.data_dir + '2021-10-13-unlabled.hdf5'
-    ]
-    dataset = QuackIterableDataset(paths)
+    dataset = QuackIterableDataset(args.data_dir)
     count = 0
     stats = {
         'censored': 0,

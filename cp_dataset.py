@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 from bisect import bisect_left
 import torch
+from pathlib import Path
+import pickle
 from torch.utils.data import Dataset
 from typing import Iterator, List, Tuple, Union
 from cp_flatten import TokenizedQuackData, QuackConstants
@@ -32,19 +34,17 @@ class QuackIterableDataset(Dataset):
         See cp_flatten.CensoredPlanetFlatten.__process_row
     """
 
-    def __init__(self, paths: List[str], tensors=False) -> None:
+    def __init__(self, path: str, tensors=False) -> None:
         """
 
         Parameters
         ----------
-        paths: List[str]
-            A list of paths as strings.
+        paths: str
+            A path to the top level of the data directories.
         """
         super().__init__()
 
-        assert (
-                paths is not None and isinstance(paths, list)
-        ), "Must supply a set of file paths as a list"
+        assert (path is not None), "Must supply a file path"
         # Store the tensors flag. See __load_item().
         self.__as_tensors = tensors
         # Initialize parameters:
@@ -53,27 +53,14 @@ class QuackIterableDataset(Dataset):
         self.__undetermined = 0
         self.__uncensored = 0
         self.__max_width = 0
-        self.__paths = paths
-        self.__path_breakpoints = []
-        self.__intermediate_lengths = []
-        # Data indices are zero based.
-        # Need to adjust total length by 1 to get correct index breakpoints.
-        breakpoint_length = -1
-        for path in paths:
-            # Get metadata.
-            with h5py.File(path, 'r') as storage:
-                self.__length += storage.attrs['length']
-                self.__censored += storage.attrs['censored']
-                self.__undetermined += storage.attrs['undetermined']
-                self.__uncensored += storage.attrs['uncensored']
-                static_size = storage.attrs['static_size']
-                variable_size = storage.attrs['max_text']
-                width = static_size + variable_size
-                if width > self.__max_width:
-                    self.__max_width = width
-                breakpoint_length += storage.attrs['length']
-            self.__path_breakpoints.append(breakpoint_length)
-            self.__intermediate_lengths.append(self.__length)
+        self.__path = path
+        with open(self.__path + '/metadata.pyc', 'rb') as retrieved_dict:
+            metadata = pickle.load(retrieved_dict)
+        self.__length = metadata['length']
+        self.__censored = metadata['censored']
+        self.__undetermined = metadata['undetermined']
+        self.__uncensored = metadata['uncensored']
+        self.__max_width = metadata['max_width']
 
     def __iter__(self) -> Iterator[TokenizedQuackData]:
         """
@@ -84,78 +71,64 @@ class QuackIterableDataset(Dataset):
 
         """
         for index in range(self.__length):
-            relative_index, file_path = self.__locate_item(index)
-            with h5py.File(file_path, 'r') as storage:
-                item = self.__load_item(relative_index, storage)
-            yield item
+            file_path = self.__locate_item(index)
+            yield self.__load_item(file_path)
 
     def __getitem__(self, index) -> TokenizedQuackData:
         """
         Implements a required method to access a single data point by index.
         """
-        relative_index, file_path = self.__locate_item(index)
-        with h5py.File(file_path, 'r') as storage:
-            item = self.__load_item(relative_index, storage)
-        return item
+        file_path = self.__locate_item(index)
+        return self.__load_item(file_path)
 
     def __len__(self) -> int:
         return self.__length
 
-    def __load_item(self, index: int, storage: h5py.File) -> Union[TokenizedQuackData, torch.Tensor]:
+    def __load_item(self, item_path: Path) -> Union[TokenizedQuackData, torch.Tensor]:
         """
-        Loads an item from an HDF5 file based on index value (group name).
+        Loads an item from a pickle file.
 
         Parameters
         ----------
-        index
-        storage
+        item_path: Path
+            A path object pointing to the item's storage.
 
         Returns
         -------
 
         """
-        group_name = str(index)
-        group = storage[group_name]
-        if isinstance(group, h5py.Group):
-            # Cast HDF5 datasets to numpy arrays, since Pytorch can create tensors directly from ndarray.
-            dataset = group['static_size'] # type: h5py.Dataset
-            static_source = np.zeros(dataset.shape, dataset.dtype)
-            static_size = []
-            dataset.read_direct(static_source)
-            dataset = group['variable_text'] # type: h5py.Dataset
-            variable_text = np.zeros(dataset.shape, dataset.dtype)
-            dataset.read_direct(variable_text)
-            # Create an "start marker" XLM-R uses 0, so will we.
-            start = np.zeros(1, static_source.dtype)
-            # Create an "end marker" XLM-R uses 2, so will we.
-            end = np.full(1, 2, static_source.dtype)
-            # Build metadata dictionary.
-            meta = {}
-            for key, value in group.attrs.items():
-                meta[key] = value
-            # Build the sequence as a tensor, text first.
-            if self.__as_tensors:
-                # Time values at static_source index 8 & 9.
-                time_values = {8, 9}
-                for index in range(static_source.size):
-                    if index in time_values:
-                       continue
-                    # Shift value by vocabulary size to avoid value collisions.
-                    static_size.append(int(static_source[index] + QuackConstants.VOCAB.value))
-                # Now deal with time by finding the difference in milliseconds.
-                time_diff = round((static_source[9] - static_source[8]) * 1000)
-                static_size.append(time_diff + QuackConstants.VOCAB.value)
-                row = np.concatenate((variable_text, start, np.array(static_size), end), dtype=static_source.dtype).astype(np.int_)
-                return torch.from_numpy(row)
-            return TokenizedQuackData(
-                metadata=meta,
-                static_size=static_source,
-                variable_text=variable_text
-            )
+        with item_path.open(mode='rb') as storage:
+            item = pickle.load(storage)
+        static_source = item['static_size']  # type: np.ndarray
+        static_size = []
+        variable_text = item['variable_text']  # type: np.ndarray
+        # Create an "start marker" XLM-R uses 0, so will we.
+        start = np.zeros(1, static_source.dtype)
+        # Create an "end marker" XLM-R uses 2, so will we.
+        end = np.full(1, 2, static_source.dtype)
+        # Build the sequence as a tensor, text first.
+        if self.__as_tensors:
+            # Time values at static_source index 8 & 9.
+            time_values = {8, 9}
+            for index in range(static_source.size):
+                if index in time_values:
+                   continue
+                # Shift value by vocabulary size to avoid value collisions.
+                static_size.append(int(static_source[index] + QuackConstants.VOCAB.value))
+            # Now deal with time by finding the difference in milliseconds.
+            time_diff = round((static_source[9] - static_source[8]) * 1000)
+            static_size.append(time_diff + QuackConstants.VOCAB.value)
+            row = np.concatenate((variable_text, start, np.array(static_size), end), dtype=static_source.dtype).astype(np.int_)
+            return torch.from_numpy(row)
+        return TokenizedQuackData(
+            metadata=item['metadata'],
+            static_size=static_source,
+            variable_text=variable_text
+        )
 
-    def __locate_item(self, index: int) -> Tuple[int, str]:
+    def __locate_item(self, index: int, dir_only: bool = False) -> Path:
         """
-        Translates a global index value into a file relative index and provides a path to the file.
+        Translates a global index value into a file path to the file or enclosing directory.
 
         Parameters
         ----------
@@ -164,17 +137,15 @@ class QuackIterableDataset(Dataset):
 
         Returns
         -------
-        index: int
-          The correct internal index for the item in the referenced file.
-        path: str
-          A file path to the file containing the item.
+        path: Path
+          A path object to the file containing the item.
         """
-        path_index = bisect_left(self.__path_breakpoints, index)
-        path = self.__paths[path_index]
-        if path_index > 0:
-            # Subtract the lengths of the previous files.
-            index = index - self.__intermediate_lengths[path_index - 1]
-        return index, path
+        segment_1 = index // 100000
+        remainder = index - (segment_1 * 100000)
+        segment_2 = remainder // 1000
+        if dir_only:
+            return Path(f'/{segment_1}/{segment_2}')
+        return Path(f'{self.__path}/{segment_1}/{segment_2}/{index}.pyc')
 
     def censored(self) -> int:
         return self.__censored
