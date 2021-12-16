@@ -8,6 +8,8 @@ def main():
     # Add args to make a more flexible cli tool.
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--data_dir', type=str, default='/data')
+    arg_parser.add_argument('--start', type=int)
+    arg_parser.add_argument('--end', type=int)
     args = arg_parser.parse_args()
     dataset = QuackIterableDataset(args.data_dir)
     count = 0
@@ -16,9 +18,18 @@ def main():
         'undetermined': 0,
         'uncensored': 0
     }
+    length = len(dataset)
+    start = 0
+    end = length
+    if args.start is not None and args.end is not None:
+        start = args.start
+        end = args.end
+        length = end - start
 
-    with IncrementalBar('Verifying', max=len(dataset)) as bar:
-        for item in dataset:
+
+    with IncrementalBar('Verifying', max=length) as bar:
+        for index in range(start, end):
+            item = dataset[index]
             # Validate:
             verify_returned_item(item)
             meta = item['metadata']
@@ -35,11 +46,13 @@ def main():
     for key, value in stats.items():
         print(f'{key}: {value}')
 
-    assert count == len(dataset), f"Dataset should contain{len(dataset)} items but counted {count} items"
-    assert stats['censored'] == dataset.censored(), f"Dataset should contain{dataset.censored()} censored items but counted {stats['censored']} items"
-    assert stats['undetermined'] == dataset.undetermined(), f"Dataset should contain{dataset.undetermined()} censored items but counted {stats['undetermined']} items"
-    assert stats['uncensored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
-    assert dataset.data_width() > 0, f"Dataset should contain a functional max width"
+    if args.start is None and args.end is None:
+        # Tested the entire dataset
+        assert count == len(dataset), f"Dataset should contain{len(dataset)} items but counted {count} items"
+        assert stats['censored'] == dataset.censored(), f"Dataset should contain{dataset.censored()} censored items but counted {stats['censored']} items"
+        assert stats['undetermined'] == dataset.undetermined(), f"Dataset should contain{dataset.undetermined()} censored items but counted {stats['undetermined']} items"
+        assert stats['uncensored'] == dataset.uncensored(), f"Dataset should contain{dataset.uncensored()} censored items but counted {stats['uncensored']} items"
+        assert dataset.data_width() > 0, f"Dataset should contain a functional max width"
 
 
 if __name__ == '__main__':
