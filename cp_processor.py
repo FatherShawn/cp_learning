@@ -1,8 +1,9 @@
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
-import h5py
 from datetime import datetime
 from argparse import ArgumentParser
 import numpy as np
+from pathlib import Path
+import pickle
 
 
 class FreqIter:
@@ -14,6 +15,15 @@ class FreqIter:
         for key, value in self.__frequency_dict.items():
             for instance in range(value):
                 yield key
+
+
+def filepath(index: int, dir_only=False) -> str:
+    rank_five = index // 100000
+    remainder = index - (rank_five * 100000)
+    rank_three_four = remainder // 1000
+    if dir_only:
+        return f'/{rank_five}/{rank_three_four}'
+    return f'/{rank_five}/{rank_three_four}/{index}.pyc'
 
 
 def verify_returned_item(item: TokenizedQuackData) -> None:
@@ -45,68 +55,71 @@ def main() -> None:
     urls = [
         args.source_path
     ]
-    dataset = CensoredPlanetFlatten(urls, args.vocab_path, True, True, True)
+    dataset = CensoredPlanetFlatten(urls, args.vocab_path, True, False, True)
     count = 0
     variable_census = {}
-    stats = {
-        'censored': 0,
-        'undetermined': 0,
-        'uncensored': 0,
-        'length': 0,
-        'static_size': 0,
-        'min_text': 0,
-        'q1_text': 0,
-        'median_text': 0,
-        'q3_text': 0,
-        'max_text': 0
-    }
-    with h5py.File(args.storage_path, 'w') as storage:
-        for item in dataset:
-            # Validate:
-            meta = item['metadata']
-            verify_returned_item(item)
-            # Create response group
-            index = str(count)
-            # Store:
-            response = storage.create_group(index)
-            for key, value in meta.items():
-                response.attrs[key] = value
-            response.create_dataset('static_size', data=item['static_size'])
-            response.create_dataset('variable_text', data=item['variable_text'])
-            # Count:
-            if meta['censored'] == 1:
-                stats['censored'] += 1
-            elif meta['censored'] == 0:
-                stats['undetermined'] += 1
-            elif meta['censored'] == -1:
-                stats['uncensored'] += 1
-            variable_size = item['variable_text'].size
-            try:
-                variable_census[variable_size] += 1
-            except KeyError:
-                variable_census[variable_size] = 1
-            count += 1
-            if count % 100000 == 0:
-                # Really only need to store this once, but this is better than another conditional.
-                stats['static_size'] = item['static_size'].size
-                with open(args.log_path, 'a') as log:
-                    item_date = datetime.fromtimestamp(meta['timestamp']).date().isoformat()
-                    log.write(f'Processed {count:,} items. Last item processed was from {item_date}\n')
-        census_expanded = FreqIter(variable_census)
-        census = np.fromiter(census_expanded, int, count)
-        stats['length'] = count
-        stats['min_text'] = np.min(census)
-        stats['q1_text'] = np.quantile(census, 0.25)
-        stats['median_text'] = np.quantile(census, 0.5)
-        stats['q3_text'] = np.quantile(census, 0.75)
-        stats['max_text'] = np.max(census)
-        for key in stats.keys():
-            storage.attrs[key] = stats[key]
+
+    try:
+        with open(args.storage_path + '/metadata.pyc', 'rb') as retrieved_dict:
+            metadata = pickle.load(retrieved_dict)
+            count = metadata['length']
+    except OSError:
+        count = 0
+        metadata = {
+            'censored': 0,
+            'undetermined': 0,
+            'uncensored': 0,
+            'length': 0,
+            'max_width': 0
+        }
+
+    for item in dataset:
+        # Validate:
+        meta = item['metadata']
+        verify_returned_item(item)
+        # Create response group
+        index = str(count)
+        # Ensure storage is ready.
+        storage_path = Path(args.storage_path + filepath(count, dir_only=True))
+        storage_path.mkdir(parents=True, exist_ok=True)
+        item_storage = Path(args.storage_path + filepath(count))
+        # Count:
+        if meta['censored'] == 1:
+            metadata['censored'] += 1
+        elif meta['censored'] == 0:
+            metadata['undetermined'] += 1
+        elif meta['censored'] == -1:
+            metadata['uncensored'] += 1
+        width = item['static_size'].size + item['variable_text'].size
+        if width > metadata['max_width']:
+            metadata['max_width'] = width
+        # Store as verified:
+        verified = False
+        with item_storage.open(mode='wb') as target:
+            pickle.dump(item, target)
+        try:
+            with item_storage.open(mode='rb') as check:
+                check = pickle.load(check)
+            verify_returned_item(check)
+        except Exception:
+            # Don't sweat a single failure among 100s of thousands of items.
+            continue
+        count += 1
+        if count % 100000 == 0:
+            with open(args.log_path, 'a') as log:
+                item_date = datetime.fromtimestamp(meta['timestamp']).date().isoformat()
+                log.write(f'Processed {count:,} items. Last item processed was from {item_date}\n')
+    metadata['length'] = count
+    with open(args.storage_path + '/metadata.pyc', 'wb') as stored_dict:
+        pickle.dump(metadata, stored_dict)
+    print(f'{count} items processed into pickled dictionaries')
+    for key, value in metadata.items():
+        print(f'{key}: {value}')
 
     # Report
     with open(args.log_path, 'a') as log:
-        log.write(f'{count} items in the dataset with the following distribution:\n')
-        for key, value in stats.items():
+        log.write(f'{count} items processed into pickled dictionaries with the following metadata:\n')
+        for key, value in metadata.items():
             log.write(f'{key}: {value}\n')
 
 
