@@ -30,12 +30,12 @@ def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
 
 
 class QuackTokenizedDataModule(pl.LightningDataModule):
-    def __init__(self, data_paths: list, batch_size: int = 64, workers: int = 0, train_transforms=None,
+    def __init__(self, data_dir: str, batch_size: int = 64, workers: int = 0, train_transforms=None,
                  val_transforms=None, test_transforms=None, dims=None):
         super().__init__(train_transforms, val_transforms, test_transforms, dims)
         self.__batch_size = batch_size
         self.__workers = workers
-        dataset = QuackIterableDataset(data_paths, tensors=True)
+        dataset = QuackIterableDataset(data_dir, tensors=True)
         self.__width = dataset.data_width()
         # Reserve 20% of the data as test data.
         test_reserve = round(len(dataset) * 0.2)

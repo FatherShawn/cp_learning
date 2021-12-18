@@ -1,6 +1,4 @@
-import h5py
 import numpy as np
-from bisect import bisect_left
 import torch
 from pathlib import Path
 import pickle
@@ -11,8 +9,7 @@ from cp_flatten import TokenizedQuackData, QuackConstants
 
 class QuackIterableDataset(Dataset):
     """
-    Iterates or selectively retrieves items from a collection of HDF5 files.  Metadata for the file is stored as
-    HDF5 Attributes:
+    Iterates or selectively retrieves items from a collection of python pickle files which contain TokenizedQuackData
     length: The number of responses in the file.
     censored: The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
@@ -20,15 +17,15 @@ class QuackIterableDataset(Dataset):
     uncensored The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
 
-    Each response is stored in an HDF5 Group, named with the index number of the response, zero based.
-    Metadata for the response is stored in HDF5 Attributes on the Group:
+    Each response is stored in a single .pyc file, named with the index number of the response, zero based.
+    Metadata for the response is stored in the metadata key of the TokenizedQuackData typed dictionary:
     domain: The domain under test
     ip: The IPv4 address for this test
     location: The country returned by MMDB for the IP address
     timestamp: A Unix timestamp for the time of the test
     censored: 1 if censored, -1 if uncensored, 0 as default (undetermined)
 
-    Each response Group stores two HDF5 Datasets:
+    Each TokenizedQuackData stores two numpy arrays:
     'static_size': Data that is a fixed size.  See cp_flatten.CensoredPlanetFlatten.__process_row
     'variable_text' Text data that has been encoded (tokenized) using the XLMR pretrained model.
         See cp_flatten.CensoredPlanetFlatten.__process_row

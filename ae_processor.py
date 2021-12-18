@@ -17,16 +17,7 @@ def main() -> None:
     # add trainer args (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
     args = arg_parser.parse_args()
-    # A list of paths to HDF5 files.
-    data_paths = [
-        args.data_dir + '2021-08-04-labeled.hdf5',
-        args.data_dir + '2021-08-26-labeled.hdf5',
-        args.data_dir + '2021-08-25-labeled.hdf5',
-        args.data_dir + '2021-08-08-labeled.hdf5',
-        args.data_dir + '2021-08-16-labeled.hdf5',
-        args.data_dir + '2021-10-13-unlabled.hdf5'
-    ]
-    data = QuackTokenizedDataModule(data_paths, batch_size=args.batch_size, workers=args.num_workers)
+    data = QuackTokenizedDataModule(args.data_dir, batch_size=args.batch_size, workers=args.num_workers)
     # Max time difference determined by data analysis.
     max_index = 131300 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
