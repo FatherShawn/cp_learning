@@ -6,17 +6,17 @@ from torch.utils.data import DataLoader, random_split
 from torch.nn import functional as F
 from cp_dataset import QuackIterableDataset
 from cp_flatten import QuackConstants
-from typing import Optional
+from typing import List
 
 
-def pad_right(batch: list[pt.Tensor]) -> pt.Tensor:
+def pad_right(batch: List[pt.Tensor]) -> pt.Tensor:
     '''
     Receives a list of Tensors with B elements.  Calculates the widest tensor, which is length T. Pads all
     narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
 
     Parameters
     ----------
-    batch: list[pt.Tensor]
+    batch: List[pt.Tensor]
         A list of tensors in the batch.
 
     Returns
