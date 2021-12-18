@@ -31,7 +31,7 @@ class QuackConstants(Enum):
     CONTROL_URLS = [
         'example5718349450314.com',  # echo/discard
         'rtyutgyhefdafioasfjhjhi.com'  # HTTP/S
-    ]  # type: list[str]
+    ]  # type: List[str]
     # Re-mapped XLMR tokens in use to a smaller vocab:
     VOCAB = 6813
     # XLM-R uses 1 as the token for <pad>.
