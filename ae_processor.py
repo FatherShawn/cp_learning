@@ -2,7 +2,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder
 from pytorch_lightning import Trainer
-from argparse import ArgumentParser, BooleanOptionalAction
+from argparse import ArgumentParser
 
 
 def main() -> None:
