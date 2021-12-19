@@ -24,9 +24,11 @@ def main() -> None:
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
     if do_tune:
         trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
+        print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     else:
         trainer = Trainer.from_argparse_args(args, precision=16)
+        print('Ready for training...')
         trainer.fit(model, datamodule=data)
 
 
