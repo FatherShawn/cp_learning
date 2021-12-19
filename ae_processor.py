@@ -7,13 +7,14 @@ from argparse import ArgumentParser, BooleanOptionalAction
 
 def main() -> None:
     # Add args to make a more flexible cli tool.
+    do_tune = False
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--data_dir', type=str, default='/data')
     arg_parser.add_argument('--batch_size', type=int, default=4)
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
-    arg_parser.add_argument('--tune', action=BooleanOptionalAction)
+    arg_parser.add_argument('--tune', type=bool, dest=do_tune, action='store_true')
     # add trainer args (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
     args = arg_parser.parse_args()
