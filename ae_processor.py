@@ -22,7 +22,7 @@ def main() -> None:
     # Max time difference determined by data analysis.
     max_index = 131300 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
-    if args.tune:
+    if do_tune:
         trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
         trainer.tune(model, datamodule=data)
     else:
