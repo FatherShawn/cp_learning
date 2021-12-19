@@ -13,7 +13,7 @@ def main() -> None:
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
-    arg_parser.add_argument('--tune', dest='do_tune', action='store_true', default=False)
+    arg_parser.add_argument('--tune', action='store_true', default=False)
     # add trainer args (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
     args = arg_parser.parse_args()
