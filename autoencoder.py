@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 import torch as pt
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -160,7 +160,7 @@ class QuackAutoEncoder(pl.LightningModule):
         return loss
 
 
-    def forward(self, x: pt.Tensor) -> tuple[pt.Tensor, pt.Tensor]:
+    def forward(self, x: pt.Tensor) -> Tuple[pt.Tensor, pt.Tensor]:
         """
         We put just the encoding process in forward.  The twin decoding process will only be found in
         the common step used in training and testing. This prepares the model for its intended use as
@@ -173,7 +173,7 @@ class QuackAutoEncoder(pl.LightningModule):
 
         Returns
         -------
-        tuple[pt.Tensor, pt.Tensor]
+        Tuple[pt.Tensor, pt.Tensor]
              * Final outputs of the encoding layer.
              * Encoded processing of the input tensor
         """
