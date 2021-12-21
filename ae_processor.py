@@ -14,6 +14,7 @@ def main() -> None:
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
     arg_parser.add_argument('--tune', action='store_true', default=False)
+    arg_parser.add_argument('--checkpoint_path', type=str)
     # add trainer args (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
     args = arg_parser.parse_args()
@@ -28,7 +29,10 @@ def main() -> None:
     else:
         trainer = Trainer.from_argparse_args(args, precision=16)
         print('Ready for training...')
-        trainer.fit(model, datamodule=data)
+        if args.checkpoint_path is None:
+            trainer.fit(model, datamodule=data)
+        else:
+            trainer.fit(model, datamodule=data, ckpt_path=args.checkpoint_path)
 
 
 if __name__ == '__main__':
