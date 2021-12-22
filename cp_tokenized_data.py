@@ -36,6 +36,7 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__batch_size = batch_size
         self.__workers = workers
         dataset = QuackIterableDataset(data_dir, tensors=True)
+        print(f'Source dataset ready with {len(dataset)} items.')
         self.__width = dataset.data_width()
         # Reserve 20% of the data as test data.
         test_reserve = round(len(dataset) * 0.2)
@@ -44,6 +45,9 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         self.__train_data, self.__test_data, self.__val_data = random_split(
             dataset, [len(dataset) - test_reserve - val_reserve, test_reserve, val_reserve]
         )
+        print(f'Training dataset randomly split with {len(self.__train_data)} items.')
+        print(f'Test dataset randomly split with {len(self.__test_data)} items.')
+        print(f'Validation dataset randomly split with {len(self.__val_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True, num_workers=self.__workers)
