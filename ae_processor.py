@@ -20,7 +20,7 @@ def main() -> None:
     args = arg_parser.parse_args()
     data = QuackTokenizedDataModule(args.data_dir, batch_size=args.batch_size, workers=args.num_workers)
     # Max value of static is from the ipv4 segments.
-    max_index = 255 + QuackConstants.VOCAB.value
+    max_index = 256 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
     if args.tune:
         trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
