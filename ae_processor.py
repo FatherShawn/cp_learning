@@ -2,6 +2,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint
 from argparse import ArgumentParser
 
 
@@ -27,7 +28,11 @@ def main() -> None:
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     else:
-        trainer = Trainer.from_argparse_args(args, precision=16)
+        checkpoint_callback = ModelCheckpoint(
+            every_n_train_steps=500,
+            save_last=True
+        )
+        trainer = Trainer.from_argparse_args(args, precision=16, callbacks=[checkpoint_callback])
         print('Ready for training...')
         if args.checkpoint_path is None:
             trainer.fit(model, datamodule=data)

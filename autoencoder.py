@@ -113,6 +113,7 @@ class QuackAutoEncoder(pl.LightningModule):
         # An attention network
         self.__attention = AttentionModule()
         self.__attention_score = AttentionScore(hidden_size)
+        self.save_hyperparameters()
         # For tuning.
         self.batch_size = 2
 
