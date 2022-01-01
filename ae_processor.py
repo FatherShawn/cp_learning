@@ -2,7 +2,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from argparse import ArgumentParser
 
 
@@ -32,7 +32,16 @@ def main() -> None:
             every_n_train_steps=500,
             save_last=True
         )
-        trainer = Trainer.from_argparse_args(args, precision=16, callbacks=[checkpoint_callback])
+        early_stopping_callback = EarlyStopping(
+            monitor="val_loss",
+            stopping_threshold=1e-3,
+            check_finite=True,  # Stops training if the monitored metric becomes NaN or infinite.
+        )
+        trainer = Trainer.from_argparse_args(
+            args,
+            precision=16,
+            callbacks=[early_stopping_callback, checkpoint_callback]
+        )
         print('Ready for training...')
         if args.checkpoint_path is None:
             trainer.fit(model, datamodule=data)
