@@ -29,12 +29,14 @@ def main() -> None:
         trainer.tune(model, datamodule=data)
     else:
         checkpoint_callback = ModelCheckpoint(
-            every_n_train_steps=500,
+            monitor="val_loss",
+            save_top_k=3,
             save_last=True
         )
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
-            stopping_threshold=1e-3,
+            patience=10,
+            stopping_threshold=250,
             check_finite=True,  # Stops training if the monitored metric becomes NaN or infinite.
         )
         trainer = Trainer.from_argparse_args(
