@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition interactive
 #SBATCH -J spdDeviceQuery
-#SBATCH --ntasks l
+#SBATCH --ntasks 1
 #SBATCH --gres gpu:1
 #SBATCH --mem <fond color="red">4</fond color>
 
