@@ -13,7 +13,7 @@ echo ">>>> Begin spdDeviceQuery"
 
 # actual binary (with IO redirections) and required input
 # parameters is called in the next line
-git checkout https://github.com/NVIDIA/cuda-samples.git
+git clone https://github.com/NVIDIA/cuda-samples.git
 cd cuda-samples/Samples/1_Utilities/deviceQuery/
 make clean
 make
