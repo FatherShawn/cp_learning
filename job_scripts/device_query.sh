@@ -3,7 +3,7 @@
 #SBATCH -J spdDeviceQuery
 #SBATCH --ntasks 1
 #SBATCH --gres gpu:1
-#SBATCH --mem <fond color="red">4</fond color>
+#SBATCH --mem 8
 
 
 # change to the working directory
