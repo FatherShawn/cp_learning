@@ -242,7 +242,9 @@ class QuackAutoEncoder(pl.LightningModule):
             decoder_input = self.__embed(next_words)
         predicted_batch = pt.stack(all_predictions, dim=1)
         loss = self.loss_over_time(x, predicted_batch)
-        self.log(f"{step_id}_loss", loss)
+        log_interval_option = None if step_id == 'train' else True
+        log_sync = False if step_id == 'train' else True
+        self.log(f"{step_id}_loss", loss, on_step=log_interval_option, sync_dist=log_sync)
         return loss
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
