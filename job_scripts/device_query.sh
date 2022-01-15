@@ -4,6 +4,7 @@
 #SBATCH --ntasks 1
 #SBATCH --gres gpu:1
 #SBATCH --mem=8
+#SBATCH --wckey=""
 
 
 # change to the working directory
