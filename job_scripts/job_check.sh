@@ -1,9 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name="demoJob"
+#SBATCH --partition production
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
-#SBATCH --mem=4GB
+#SBATCH --mem=8GB
 
 
 # change to the working directory
