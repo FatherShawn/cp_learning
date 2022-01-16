@@ -22,7 +22,10 @@ class QuackLatentClassifier(pl.LightningModule):
             nn.LeakyReLU(leak_rate),
             nn.Linear(initial_size // 8, initial_size // 1),
         )
-        self.__loss_module = nn.BCEWithLogitsLoss()
+        # We have 653481 uncensored (negative samples) and 215016 positive samples in our dataset.
+        # 653481 / 215016 = 3.0392203371
+        balance_factor = pt.tensor(3.039)
+        self.__loss_module = nn.BCEWithLogitsLoss(pos_weight=balance_factor)
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         return self.__model(x)
