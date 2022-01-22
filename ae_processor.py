@@ -23,15 +23,14 @@ def main(args: Namespace) -> None:
         )
         trainer = Trainer.from_argparse_args(
             args,
-            return_predictions=False,
             callbacks=[writer_callback]
         )
         model.freeze()
         print('Ready for inference...')
         if args.checkpoint_path is None:
-            trainer.predict(model, datamodule=data)
+            trainer.predict(model, datamodule=data, return_predictions=False)
         else:
-            trainer.predict(model, datamodule=data, ckpt_path=args.checkpoint_path)
+            trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
     else:
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
