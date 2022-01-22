@@ -1,5 +1,5 @@
-import numpy as np
-
+from autoencoder import item_path
+from cp_tokenized_data import concatenate_data
 from cp_dataset import QuackIterableDataset
 from progress.bar import IncrementalBar
 from argparse import ArgumentParser
@@ -7,38 +7,6 @@ from pathlib import Path
 import pickle
 from PIL import Image
 from nparray2png import nparray2png
-from cp_flatten import QuackConstants
-
-
-def concatenate_data(item: dict) ->np.ndarray:
-    static_source = item['static_size']  # type: np.ndarray
-    static_size = []
-    variable_text = item['variable_text']  # type: np.ndarray
-    # Create an "start marker" XLM-R uses 0, so will we.
-    start = np.zeros(1, static_source.dtype)
-    # Create an "end marker" XLM-R uses 2, so will we.
-    end = np.full(1, 2, static_source.dtype)
-    # Build the sequence as a tensor, text first.
-    # Time values at static_source index 8 & 9.
-    time_values = {8, 9}
-    for index in range(static_source.size):
-        if index in time_values:
-            continue
-        # Shift value by vocabulary size to avoid value collisions.
-        static_size.append(int(static_source[index] + QuackConstants.VOCAB.value))
-    # Now deal with time by finding the difference in seconds.
-    time_diff = round((static_source[9] - static_source[8]))
-    static_size.append(time_diff + QuackConstants.VOCAB.value)
-    return np.concatenate((variable_text, start, np.array(static_size), end), dtype=static_source.dtype).astype(
-        np.int_)
-
-def item_path(index: int, suffix:str='png', dir_only:bool=False) -> str:
-    rank_five = index // 100000
-    remainder = index - (rank_five * 100000)
-    rank_three_four = remainder // 1000
-    if dir_only:
-        return f'/{rank_five}/{rank_three_four}/{index}'
-    return f'/{rank_five}/{rank_three_four}/{index}/{index}.{suffix}'
 
 
 def main() -> None:
@@ -78,10 +46,10 @@ def main() -> None:
             item = dataset[index]
             meta = item['metadata']
             # Ensure storage is ready.
-            storage_path = Path(args.storage_path + item_path(count, dir_only=True))
+            storage_path = Path(args.storage_path + item_path(count, dir_only=True, is_collection=True))
             storage_path.mkdir(parents=True, exist_ok=True)
-            image_storage = Path(args.storage_path + item_path(count, 'png'))
-            data_storage = Path(args.storage_path + item_path(count, 'pyc'))
+            image_storage = Path(args.storage_path + item_path(count, 'png', is_collection=True))
+            data_storage = Path(args.storage_path + item_path(count, 'pyc', is_collection=True))
             # Count:
             if meta['censored'] == 1:
                 metadata['censored'] += 1

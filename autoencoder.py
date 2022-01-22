@@ -1,4 +1,6 @@
-from typing import Any, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
+from pathlib import Path
+import pickle
 import torch as pt
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -6,6 +8,80 @@ import numpy as np
 from cp_flatten import QuackConstants
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import BasePredictionWriter
+
+def item_path(index: int, suffix: str = 'png', dir_only: bool = False, is_collection: bool = False) -> str:
+    rank_five = index // 100000
+    remainder = index - (rank_five * 100000)
+    rank_three_four = remainder // 1000
+    stem = f'/{rank_five}/{rank_three_four}'
+    if is_collection:
+        stem = stem + f'/{index}'
+    if dir_only:
+        return stem
+    return stem + f'/{index}.{suffix}'
+
+class AutoencoderWriter(BasePredictionWriter):
+    """
+    Extends prediction writer to store encoded Quack data.
+    """
+
+    def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False) -> None:
+        super().__init__(write_interval)
+        self.__storage_path = storage_path
+        self.__root_meta = Path(storage_path + '/metadata.pyc')
+        self.__filtered = filtered
+        self.__count = 0
+        self.__metadata = {
+            'censored': 0,
+            'undetermined': 0,
+            'uncensored': 0,
+            'length': 0
+        }
+
+    def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
+                           batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
+                           dataloader_idx: int) -> None:
+        meta: List[dict]
+        processed: pt.Tensor
+        meta, processed = batch
+        # Copy to cpu and convert to numpy array.
+        prep_for_numpy = processed.cpu()
+        data = prep_for_numpy.numpy()
+        for row in data:
+            # Ensure storage is ready.
+            storage_path = Path(self.__storage_path + item_path(self.__count, dir_only=True))
+            storage_path.mkdir(parents=True, exist_ok=True)
+            data_storage = Path(self.__storage_path + item_path(self.__count, 'pyc'))
+            # Get this row's metadata.
+            row_meta = meta.pop(0)
+            # Count:
+            if row_meta['censored'] == 1:
+                self.__metadata['censored'] += 1
+            elif row_meta['censored'] == 0:
+                if self.__filtered:
+                    continue
+                else:
+                    self.__metadata['undetermined'] += 1
+            elif row_meta['censored'] == -1:
+                self.__metadata['uncensored'] += 1
+
+            # Store:
+            data = {
+                'metadata': row_meta,
+                'encoded': row
+            }
+            with data_storage.open(mode='wb') as target:
+                pickle.dump(data, target)
+            self.__count += 1
+
+    def write_on_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", predictions: Sequence[Any],
+                           batch_indices: Optional[Sequence[Any]]) -> None:
+        # Store dataset level metadata.
+        root_meta = Path(self.__storage_path + '/metadata.pyc')
+        self.__metadata['length'] = self.__count
+        with root_meta.open(mode='wb') as stored_dict:
+            pickle.dump(self.__metadata, stored_dict)
 
 
 class AttentionScore(nn.Module):
@@ -255,6 +331,11 @@ class QuackAutoEncoder(pl.LightningModule):
 
     def test_step(self, x: pt.Tensor, batch_index: int) -> float:
         return self._common_step(x, batch_index, 'test')
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
+        meta, data = batch
+        encoded, _ = self.forward(data)
+        return meta, encoded
 
     def configure_optimizers(self) -> pt.optim.Optimizer:
         return pt.optim.AdamW(self.parameters(), lr=self.__learning_rate)

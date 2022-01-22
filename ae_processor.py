@@ -1,6 +1,6 @@
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
-from autoencoder import QuackAutoEncoder
+from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from argparse import ArgumentParser, Namespace
@@ -15,6 +15,23 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
+    elif args.encode:
+        writer_callback = AutoencoderWriter(
+            write_interval='batch_and_epoch',
+            storage_path='/data/encoded',
+            filtered=args.filtered
+        )
+        trainer = Trainer.from_argparse_args(
+            args,
+            return_predictions=False,
+            callbacks=[writer_callback]
+        )
+        model.freeze()
+        print('Ready for inference...')
+        if args.checkpoint_path is None:
+            trainer.predict(model, datamodule=data)
+        else:
+            trainer.predict(model, datamodule=data, ckpt_path=args.checkpoint_path)
     else:
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
@@ -43,13 +60,17 @@ def main(args: Namespace) -> None:
 if __name__ == '__main__':
     # Add arguments to make a more flexible cli tool.
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--data_dir', type=str, default='/data')
+    arg_parser.add_argument('--data_dir', type=str, default='./data')
     arg_parser.add_argument('--batch_size', type=int, default=4)
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
     arg_parser.add_argument('--tune', action='store_true', default=False)
+    arg_parser.add_argument('--encode', action='store_true', default=False)
+    arg_parser.add_argument('--filtered', action='store_true', default=False)
     arg_parser.add_argument('--checkpoint_path', type=str)
+    arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
+
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
     arguments = arg_parser.parse_args()
