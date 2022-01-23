@@ -14,5 +14,5 @@ echo ">>>> Begin demoJob"
 
 # actual binary (with IO redirections) and required input
 # parameters is called in the next line
-ls -lah
-
+module list
+conda env list
