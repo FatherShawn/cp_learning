@@ -6,8 +6,18 @@ echo "Restore modules"
 module purge
 module restore
 echo "Activate cplanet conda environment"
-conda env create --file /global/u/shawn_bc_10/cplanet.yml
-conda activate cplanet
+conda init bash
+if { conda env list | grep 'cplanet'; } >/dev/null 2>&1;
+then
+    echo "Updating cplanet environment"
+    conda activate cplanet
+    conda env update --file /global/u/shawn_bc_10/cplanet.yml
+    echo "Environment cplanet updated and activated"
+else
+    conda env create --file /global/u/shawn_bc_10/cplanet.yml
+    conda activate cplanet
+    echo "Environment cplanet created and activated"
+fi
 # Python now at ~/.conda/envs/cplanet/bin/python
 # These packages are not in conda and would not build with conda-build skeleton:
 echo "Add non-conda packages"
