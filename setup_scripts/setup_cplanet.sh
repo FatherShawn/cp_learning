@@ -11,3 +11,5 @@ conda activate cplanet
 pip install 'fairseq>=0.10.0'
 pip install 'urlextract>=1.3.0'
 pip install 'webdataset==0.1.62'
+# Pull down project code
+git clone https://github.com/FatherShawn/cp_learning.git
