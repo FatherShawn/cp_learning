@@ -6,7 +6,8 @@ echo "Restore modules"
 module purge
 module restore
 echo "Activate cplanet conda environment"
-conda init bash
+# Running a subshell, we need to run the init hook code directly.
+eval "$(conda shell.bash hook)"
 if { conda env list | grep 'cplanet'; } >/dev/null 2>&1;
 then
     echo "Updating cplanet environment"
