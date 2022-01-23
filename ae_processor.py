@@ -18,7 +18,7 @@ def main(args: Namespace) -> None:
     elif args.encode:
         writer_callback = AutoencoderWriter(
             write_interval='batch_and_epoch',
-            storage_path='/data/encoded',
+            storage_path=args.storage_path,
             filtered=args.filtered
         )
         trainer = Trainer.from_argparse_args(
