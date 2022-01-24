@@ -22,7 +22,7 @@ fi
 # Python now at ~/.conda/envs/cplanet/bin/python
 # These packages are not in conda and would not build with conda-build skeleton:
 echo "Add non-conda packages"
-pip install 'fairseq>=0.10.0'
+pip install 'fairseq==0.10.0'
 pip install 'urlextract>=1.3.0'
 pip install 'webdataset==0.1.62'
 # Pull down project code
