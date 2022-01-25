@@ -1,8 +1,10 @@
+from time import gmtime, strftime
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import CometLogger
 from argparse import ArgumentParser, Namespace
 
 
@@ -11,6 +13,12 @@ def main(args: Namespace) -> None:
     # Max value of static is from the ipv4 segments.
     max_index = 256 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
+    # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
+    comet_logger = CometLogger(
+        save_dir=args.comet_storage,
+        project_name="censored-planet",
+        experiment_name=strftime("%d %b %Y %H:%M", gmtime()),  # Optional
+    )
     if args.tune:
         trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
         print('Ready for tuning...')
@@ -68,6 +76,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--encode', action='store_true', default=False)
     arg_parser.add_argument('--filtered', action='store_true', default=False)
     arg_parser.add_argument('--checkpoint_path', type=str)
+    arg_parser.add_argument('--comet_storage', type=str, default='.')
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
 
     # add trainer arguments (gpus=x, precision=...)
