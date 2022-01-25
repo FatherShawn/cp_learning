@@ -20,7 +20,7 @@ def main(args: Namespace) -> None:
         experiment_name=strftime("%d %b %Y %H:%M", gmtime()),  # Optional
     )
     if args.tune:
-        trainer = Trainer.from_argparse_args(args, precision=16, auto_scale_batch_size=True)
+        trainer = Trainer.from_argparse_args(args, auto_scale_batch_size=True)
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     elif args.encode:
@@ -53,7 +53,6 @@ def main(args: Namespace) -> None:
         )
         trainer = Trainer.from_argparse_args(
             args,
-            precision=16,
             strategy='ddp',
             callbacks=[early_stopping_callback, checkpoint_callback]
         )
