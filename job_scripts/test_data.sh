@@ -23,4 +23,4 @@ else
   exit 1
 fi
 # Copy and expand data
-python $(pwd)/cp_learning//dataset_test.py  --encode --filtered --data_dir $(pwd)/pickled
+python $(pwd)/cp_learning//dataset_test.py  --data_dir $(pwd)/pickled
