@@ -8,7 +8,6 @@ def main():
     arg_parser.add_argument('--data_dir', type=str, default='/data')
     arg_parser.add_argument('--start', type=int)
     arg_parser.add_argument('--end', type=int)
-    arg_parser.add_argument('--batch_mode', action='store_true', default=False)
     args = arg_parser.parse_args()
     dataset = QuackIterableDataset(args.data_dir)
     count = 0
