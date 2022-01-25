@@ -10,7 +10,7 @@ from cp_flatten import QuackConstants
 from typing import List
 
 
-def pad_right(batch: List[pt.Tensor]) -> pt.Tensor:
+def pad_right(batch: List[dict]) -> pt.Tensor:
     '''
     Receives a list of Tensors with B elements.  Calculates the widest tensor, which is length T. Pads all
     narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
@@ -24,9 +24,12 @@ def pad_right(batch: List[pt.Tensor]) -> pt.Tensor:
     -------
     pt.Tensor
     '''
-    lengths = np.fromiter((item.size(0) for item in batch), int)
+    data = []
+    for item in batch:
+        data.append(pt.from_numpy(concatenate_data(item)))
+    lengths = np.fromiter((item.size(0) for item in data), int)
     max_length = np.max(lengths)
-    batch_padded = [F.pad(item, (0, max_length - item.size(0)), value=QuackConstants.XLMR_PAD.value) for item in batch]
+    batch_padded = [F.pad(item, (0, max_length - item.size(0)), value=QuackConstants.XLMR_PAD.value) for item in data]
     return pt.stack(batch_padded)
 
 def pad_right_with_meta(batch: List[dict]) -> Tuple[List[dict], pt.Tensor]:
