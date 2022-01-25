@@ -12,4 +12,4 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin autoEncoderTraining"
 
-python $(pwd)/ae_processor.py  --data_dir /scratch/shawn_bc_10/pickled --batch_size 12 --num_workers 8 --embed_size 96 --hidden_size 256 --gpus 8 --checkpoint_path /global/u/shawn_bc_10/checkpoints/epoch-40-step-178853.ckpt
+python $(pwd)/cp_learning/ae_processor.py  --data_dir $(pwd)/pickled --batch_size 12 --num_workers 8 --embed_size 96 --hidden_size 256 --gpus 8 --checkpoint_path /global/u/shawn_bc_10/checkpoints/epoch-40-step-178853.ckpt

@@ -12,4 +12,4 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin dataEncoder"
 
-python $(pwd)/ae_processor.py  --encode --filtered --data_dir $(pwd)/pickled --storage_path $(pwd)/encoded --batch_size 6 --num_workers 4 --embed_size 96 --hidden_size 256 --gpus 1 --checkpoint_path /global/u/shawn_bc_10/checkpoints/epoch-40-step-178853.ckpt
+python $(pwd)/cp_learning/ae_processor.py  --encode --filtered --data_dir $(pwd)/pickled --storage_path $(pwd)/encoded --batch_size 6 --num_workers 4 --embed_size 96 --hidden_size 256 --gpus 1 --checkpoint_path /global/u/shawn_bc_10/checkpoints/epoch-40-step-178853.ckpt

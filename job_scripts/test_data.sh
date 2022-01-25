@@ -13,4 +13,4 @@ cd $SLURM_WORKDIR
 echo ">>>> Begin dataVerifcation"
 
 # Copy and expand data
-python $(pwd)/dataset_test.py  --encode --filtered --data_dir /scratch/shawn_bc_10/pickled
+python $(pwd)/cp_learning//dataset_test.py  --encode --filtered --data_dir $(pwd)/pickled
