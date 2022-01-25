@@ -1,8 +1,6 @@
 from argparse import ArgumentParser
 from cp_dataset import QuackIterableDataset
 from cp_processor import verify_returned_item
-from progress.bar import IncrementalBar
-
 
 def main():
     # Add args to make a more flexible cli tool.
@@ -10,6 +8,7 @@ def main():
     arg_parser.add_argument('--data_dir', type=str, default='/data')
     arg_parser.add_argument('--start', type=int)
     arg_parser.add_argument('--end', type=int)
+    arg_parser.add_argument('--batch_mode', action='store_true', default=False)
     args = arg_parser.parse_args()
     dataset = QuackIterableDataset(args.data_dir)
     count = 0
@@ -24,23 +23,19 @@ def main():
     if args.start is not None and args.end is not None:
         start = args.start
         end = args.end
-        length = end - start
 
-
-    with IncrementalBar('Verifying', max=length) as bar:
-        for index in range(start, end):
-            item = dataset[index]
-            # Validate:
-            verify_returned_item(item)
-            meta = item['metadata']
-            if meta['censored'] == 1:
-                stats['censored'] += 1
-            elif meta['censored'] == 0:
-                stats['undetermined'] += 1
-            elif meta['censored'] == -1:
-                stats['uncensored'] += 1
-            count += 1
-            bar.next()
+    for index in range(start, end):
+        item = dataset[index]
+        # Validate:
+        verify_returned_item(item)
+        meta = item['metadata']
+        if meta['censored'] == 1:
+            stats['censored'] += 1
+        elif meta['censored'] == 0:
+            stats['undetermined'] += 1
+        elif meta['censored'] == -1:
+            stats['uncensored'] += 1
+        count += 1
 
     print(f'{count} items found in the dataset with the following distribution:')
     for key, value in stats.items():
