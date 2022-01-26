@@ -1,8 +1,5 @@
 from argparse import ArgumentParser
-from pathlib import Path
 import pickle
-
-# 891069
 
 if __name__ == '__main__':
     # Add args to make a more flexible cli tool.
