@@ -3,7 +3,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor
 from pytorch_lightning.loggers import CometLogger
 from argparse import ArgumentParser, Namespace
 
@@ -14,16 +14,18 @@ def main(args: Namespace) -> None:
     max_index = 256 + QuackConstants.VOCAB.value
     model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
-    comet_logger = CometLogger(
-        save_dir=args.comet_storage,
-        project_name="censored-planet",
-        experiment_name=strftime("%d %b %Y %H:%M", gmtime()),  # Optional
-    )
+    date_time = strftime("%d %b %Y %H:%M", gmtime())
+    device_logger = DeviceStatsMonitor()
     if args.tune:
         trainer = Trainer.from_argparse_args(args, auto_scale_batch_size=True)
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     elif args.encode:
+        comet_logger = CometLogger(
+            save_dir=args.comet_storage,
+            project_name="censored-planet",
+            experiment_name=f'autoencoder-encode: {date_time}',
+        )
         writer_callback = AutoencoderWriter(
             write_interval='batch_and_epoch',
             storage_path=args.storage_path,
@@ -31,7 +33,8 @@ def main(args: Namespace) -> None:
         )
         trainer = Trainer.from_argparse_args(
             args,
-            callbacks=[writer_callback]
+            logger=comet_logger,
+            callbacks=[writer_callback, device_logger],
         )
         model.freeze()
         print('Ready for inference...')
@@ -40,6 +43,12 @@ def main(args: Namespace) -> None:
         else:
             trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
     else:
+        # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
+        comet_logger = CometLogger(
+            save_dir=args.comet_storage,
+            project_name="censored-planet",
+            experiment_name=f'autoencoder-train: {date_time}',
+        )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
@@ -53,8 +62,9 @@ def main(args: Namespace) -> None:
         )
         trainer = Trainer.from_argparse_args(
             args,
+            logger=comet_logger,
             strategy='ddp',
-            callbacks=[early_stopping_callback, checkpoint_callback]
+            callbacks=[early_stopping_callback, checkpoint_callback, device_logger]
         )
         print('Ready for training...')
         if args.checkpoint_path is None:
