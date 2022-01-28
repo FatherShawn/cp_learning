@@ -85,7 +85,7 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         super().__init__(train_transforms, val_transforms, test_transforms, dims)
         self.__batch_size = batch_size
         self.__workers = workers
-        dataset = QuackIterableDataset(data_dir, tensors=True)
+        dataset = QuackIterableDataset(data_dir)
         self.__predict_data = QuackIterableDataset(data_dir)
         print(f'Source dataset ready with {len(dataset)} items.')
         self.__width = dataset.data_width()
