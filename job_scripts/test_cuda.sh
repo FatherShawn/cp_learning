@@ -11,5 +11,7 @@
 cd $SLURM_WORKDIR
 
 echo ">>>> Begin cudaVerifcation"
-# Check data
+
+
+# Check cuda
 python $(pwd)/cp_learning/cuda_check.py

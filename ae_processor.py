@@ -57,7 +57,7 @@ def main(args: Namespace) -> None:
         comet_logger = CometLogger(
             save_dir=args.comet_storage,
             project_name="censored-planet",
-            experiment_name=f'autoencoder-train: {date_time}',
+            experiment_name=f'{args.exp_label}: {date_time}',
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
@@ -98,6 +98,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--comet_storage', type=str, default='.')
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
     arg_parser.add_argument('--l_rate', type=float, default=1e-3)
+    arg_parser.add_argument('--exp_label', type=str, default='autoencoder-train')
 
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
