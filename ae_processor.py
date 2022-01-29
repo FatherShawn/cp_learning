@@ -5,6 +5,7 @@ from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor
 from pytorch_lightning.loggers import CometLogger
+from pytorch_lightning.plugins import DDPPlugin
 from argparse import ArgumentParser, Namespace
 
 
@@ -12,12 +13,21 @@ def main(args: Namespace) -> None:
     data = QuackTokenizedDataModule(args.data_dir, batch_size=args.batch_size, workers=args.num_workers)
     # Max value of static is from the ipv4 segments.
     max_index = 256 + QuackConstants.VOCAB.value
-    model = QuackAutoEncoder(num_embeddings=max_index, embed_size=args.embed_size, hidden_size=args.hidden_size, max_decode_length=data.get_width())
+    model = QuackAutoEncoder(
+        num_embeddings=max_index,
+        embed_size=args.embed_size,
+        hidden_size=args.hidden_size,
+        max_decode_length=data.get_width(),
+        learning_rate=args.l_rate
+    )
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
     if args.tune:
-        trainer = Trainer.from_argparse_args(args, auto_scale_batch_size=True)
+        trainer = Trainer.from_argparse_args(
+            args, auto_scale_batch_size=True,
+            strategy=DDPPlugin(find_unused_parameters=False)
+        )
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     elif args.encode:
@@ -34,7 +44,7 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger],
+            callbacks=[writer_callback, device_logger]
         )
         model.freeze()
         print('Ready for inference...')
@@ -63,7 +73,7 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            strategy='ddp',
+            strategy=DDPPlugin(find_unused_parameters=False),
             callbacks=[early_stopping_callback, checkpoint_callback, device_logger]
         )
         print('Ready for training...')
@@ -87,6 +97,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--checkpoint_path', type=str)
     arg_parser.add_argument('--comet_storage', type=str, default='.')
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
+    arg_parser.add_argument('--l_rate', type=float, default=1e-3)
 
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)

@@ -161,11 +161,11 @@ class QuackAutoEncoder(pl.LightningModule):
     A Sequence-to-Sequence based autoencoder adapted from {Raff, Inside Deep Learning: Math, Algorithms, Models} Ch. 11.
     """
     def __init__(self, num_embeddings: int, embed_size: int, hidden_size: int, layers: int = 1,
-                 max_decode_length: int = None, *args: Any, **kwargs: Any) -> None:
+                 max_decode_length: int = None, learning_rate: float = 1e-3, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.__hidden_size = hidden_size
         self.__max_decode_length = max_decode_length
-        self.__learning_rate = 1e-3
+        self.__learning_rate = learning_rate
         # Networks
         self.__embed = nn.Embedding(num_embeddings, embed_size, padding_idx=int(QuackConstants.XLMR_PAD.value))
         # We will use a bi-directional GRU so hidden size is divided by 2.
