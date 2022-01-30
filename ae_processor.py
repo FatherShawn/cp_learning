@@ -1,3 +1,6 @@
+# You must import Comet before these modules: torch
+# https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
+import comet_ml
 from time import gmtime, strftime
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
@@ -75,7 +78,6 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            strategy='ddp',
             callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
             plugins=[ray_plugin]
         )
