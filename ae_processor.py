@@ -5,7 +5,7 @@ from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor
 from pytorch_lightning.loggers import CometLogger
-from pytorch_lightning.plugins import DDPPlugin
+from ray_lightning import RayPlugin
 from argparse import ArgumentParser, Namespace
 
 
@@ -20,13 +20,14 @@ def main(args: Namespace) -> None:
         max_decode_length=data.get_width(),
         learning_rate=args.l_rate
     )
+    ray_plugin = RayPlugin(num_workers=args.num_workers, num_cpus_per_worker=1, use_gpu=False)
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
     if args.tune:
         trainer = Trainer.from_argparse_args(
             args, auto_scale_batch_size=True,
-            strategy=DDPPlugin(find_unused_parameters=False)
+            plugins=[ray_plugin]
         )
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
@@ -44,7 +45,8 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger]
+            callbacks=[writer_callback, device_logger],
+            plugins=[ray_plugin]
         )
         model.freeze()
         print('Ready for inference...')
@@ -73,8 +75,9 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            strategy=DDPPlugin(find_unused_parameters=False),
-            callbacks=[early_stopping_callback, checkpoint_callback, device_logger]
+            strategy='ddp',
+            callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
+            plugins=[ray_plugin]
         )
         print('Ready for training...')
         if args.checkpoint_path is None:
