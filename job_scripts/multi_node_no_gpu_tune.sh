@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name="18-batch"
 #SBATCH --partition production
-#SBATCH --nodes=16
-#SBATCH --ntasks=128
+#SBATCH --nodes=5
+#SBATCH --ntasks=40
 #SBATCH --tasks-per-node=8
 #SBATCH --mem=32Gb
 
@@ -69,6 +69,6 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-echo ">>>> Begin batch 4"
+echo ">>>> Begin batch 4 on 8/7"
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder batch tune cpu [4]" --data_dir $(pwd)/pickled --comet_storage $(pwd)/comet_storage_tune --accelerator cpu --batch_size 4 --num_workers 4 --embed_size 96 --hidden_size 256 --max_epochs 1 --limit_train_batches 250 --limit_val_batches 250
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder tune - 5 ray workers/7 io workers" --data_dir $(pwd)/pickled --comet_storage $(pwd)/comet_storage_tune --accelerator cpu --batch_size 4 --ray_nodes 5 --num_workers 7 --embed_size 96 --hidden_size 256 --max_epochs 1 --limit_train_batches 250 --limit_val_batches 250

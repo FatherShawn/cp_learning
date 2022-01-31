@@ -24,7 +24,7 @@ def main(args: Namespace) -> None:
         learning_rate=args.l_rate
     )
     ray_plugin = RayPlugin(
-        num_workers=args.num_workers,
+        num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
         use_gpu=False,
         find_unused_parameters=False
@@ -109,6 +109,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
     arg_parser.add_argument('--l_rate', type=float, default=1e-3)
     arg_parser.add_argument('--exp_label', type=str, default='autoencoder-train')
+    arg_parser.add_argument('--ray_nodes', type=int, default=4)
 
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
