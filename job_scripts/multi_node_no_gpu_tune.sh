@@ -44,7 +44,7 @@ echo "IP Head: $ip_head"
 
 echo "Starting HEAD at $head_node"
 srun --nodes=1 --ntasks=1 -w "$head_node" \
-    ray start --head --node-ip-address="$head_node_ip" --port=$port --redis_password=${redis_password} \
+    ray start --head --node-ip-address="$head_node_ip" --port=$port --redis-password=${redis_password} \
     --num-cpus "${SLURM_CPUS_ON_NODE}" --num-gpus 0 --block &
 # __doc_head_ray_end__
 
@@ -60,7 +60,7 @@ for ((i = 1; i <= worker_num; i++)); do
     echo "Starting WORKER $i at $node_i"
     srun --nodes=1 --ntasks=1 -w "$node_i" \
         ray start --address "$ip_head" \
-        --redis_password=${redis_password} \
+        --redis-password=${redis_password} \
         --num-cpus "${SLURM_CPUS_ON_NODE}" --num-gpus 0 --block &
     sleep 5
 done
@@ -71,4 +71,4 @@ done
 
 echo ">>>> Begin batch 4"
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder batch tune cpu [4]" --data_dir $(pwd)/pickled --comet_storage $(pwd)/comet_storage_tune --accelerator cpu --batch_size 4 --num_workers 8 --embed_size 96 --hidden_size 256 --max_epochs 1 --limit_train_batches 250 --limit_val_batches 250
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder batch tune cpu [4]" --data_dir $(pwd)/pickled --comet_storage $(pwd)/comet_storage_tune --accelerator cpu --batch_size 4 --num_workers 4 --embed_size 96 --hidden_size 256 --max_epochs 1 --limit_train_batches 250 --limit_val_batches 250

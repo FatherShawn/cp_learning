@@ -23,7 +23,12 @@ def main(args: Namespace) -> None:
         max_decode_length=data.get_width(),
         learning_rate=args.l_rate
     )
-    ray_plugin = RayPlugin(num_workers=args.num_workers, num_cpus_per_worker=1, use_gpu=False)
+    ray_plugin = RayPlugin(
+        num_workers=args.num_workers,
+        num_cpus_per_worker=1,
+        use_gpu=False,
+        find_unused_parameters=False
+    )
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()

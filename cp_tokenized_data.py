@@ -101,16 +101,41 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         print(f'Validation dataset randomly split with {len(self.__val_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.__train_data, batch_size=self.__batch_size, collate_fn=pad_right, shuffle=True, num_workers=self.__workers)
+        return DataLoader(
+            self.__train_data,
+            batch_size=self.__batch_size,
+            collate_fn=pad_right,
+            shuffle=True,
+            num_workers=self.__workers,
+            persistent_workers=True
+        )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__test_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=self.__workers)
+        return DataLoader(
+            self.__test_data,
+            batch_size=self.__batch_size,
+            collate_fn=pad_right,
+            num_workers=self.__workers,
+            persistent_workers=True
+        )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__val_data, batch_size=self.__batch_size, collate_fn=pad_right, num_workers=self.__workers)
+        return DataLoader(
+            self.__val_data,
+            batch_size=self.__batch_size,
+            collate_fn=pad_right,
+            num_workers=self.__workers,
+            persistent_workers=True
+        )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.__predict_data, batch_size=self.__batch_size, collate_fn=pad_right_with_meta, num_workers=self.__workers)
+        return DataLoader(
+            self.__predict_data,
+            batch_size=self.__batch_size,
+            collate_fn=pad_right_with_meta,
+            num_workers=self.__workers,
+            persistent_workers=True
+        )
 
     def get_width(self):
         return self.__width
