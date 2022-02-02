@@ -347,7 +347,6 @@ class QuackAutoEncoder(pl.LightningModule):
             'lr_scheduler': pt.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer=configured_optimizer,
                 T_max=self.__lr_max_epochs,
-                eta_min=self.__learning_rate_min,
-                last_epoch=self.__lr_max_epochs
+                eta_min=self.__learning_rate_min
             )
         }
