@@ -6,7 +6,7 @@ from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
 from ray_lightning import RayPlugin
 from argparse import ArgumentParser, Namespace
@@ -21,7 +21,9 @@ def main(args: Namespace) -> None:
         embed_size=args.embed_size,
         hidden_size=args.hidden_size,
         max_decode_length=data.get_width(),
-        learning_rate=args.l_rate
+        learning_rate=args.l_rate,
+        learning_rate_min=args.l_rate_min,
+        lr_max_epochs=args.l_rate_max_epoch
     )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
@@ -50,10 +52,11 @@ def main(args: Namespace) -> None:
             storage_path=args.storage_path,
             filtered=args.filtered
         )
+        lr_monitor = LearningRateMonitor(logging_interval='epoch')
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger],
+            callbacks=[writer_callback, device_logger, lr_monitor],
             plugins=[ray_plugin]
         )
         model.freeze()
@@ -107,7 +110,9 @@ if __name__ == '__main__':
     arg_parser.add_argument('--checkpoint_path', type=str)
     arg_parser.add_argument('--comet_storage', type=str, default='.')
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
-    arg_parser.add_argument('--l_rate', type=float, default=1e-3)
+    arg_parser.add_argument('--l_rate', type=float, default=1e-1)
+    arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)
+    arg_parser.add_argument('--l_rate_max_epoch', type=int, default=-1)
     arg_parser.add_argument('--exp_label', type=str, default='autoencoder-train')
     arg_parser.add_argument('--ray_nodes', type=int, default=4)
 

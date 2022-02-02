@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple, Dict
 from pathlib import Path
 import pickle
 import torch as pt
@@ -161,11 +161,14 @@ class QuackAutoEncoder(pl.LightningModule):
     A Sequence-to-Sequence based autoencoder adapted from {Raff, Inside Deep Learning: Math, Algorithms, Models} Ch. 11.
     """
     def __init__(self, num_embeddings: int, embed_size: int, hidden_size: int, layers: int = 1,
-                 max_decode_length: int = None, learning_rate: float = 1e-3, *args: Any, **kwargs: Any) -> None:
+                 max_decode_length: int = None, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
+                 lr_max_epochs: int = -1, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.__hidden_size = hidden_size
         self.__max_decode_length = max_decode_length
-        self.__learning_rate = learning_rate
+        self.__learning_rate_init = learning_rate
+        self.__learning_rate_min = learning_rate_min
+        self.__lr_max_epochs = lr_max_epochs
         # Networks
         self.__embed = nn.Embedding(num_embeddings, embed_size, padding_idx=int(QuackConstants.XLMR_PAD.value))
         # We will use a bi-directional GRU so hidden size is divided by 2.
@@ -337,5 +340,14 @@ class QuackAutoEncoder(pl.LightningModule):
         encoded, _ = self.forward(data)
         return meta, encoded
 
-    def configure_optimizers(self) -> pt.optim.Optimizer:
-        return pt.optim.AdamW(self.parameters(), lr=self.__learning_rate)
+    def configure_optimizers(self) -> Dict:
+        configured_optimizer = pt.optim.AdamW(self.parameters(), lr=self.__learning_rate_init)
+        return {
+            'optimizer': configured_optimizer,
+            'lr_scheduler': pt.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer=configured_optimizer,
+                T_max=self.__lr_max_epochs,
+                eta_min=self.__learning_rate_min,
+                last_epoch=self.__lr_max_epochs
+            )
+        }
