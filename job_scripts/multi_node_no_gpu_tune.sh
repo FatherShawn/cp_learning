@@ -6,7 +6,7 @@
 #SBATCH --tasks-per-node=8
 #SBATCH --mem=40Gb
 
-# Auto resubmit.
+# Auto resubm
 #SBATCH --signal=SIGUSR1@90
 
 # change to the working directory
@@ -70,15 +70,16 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder tune - lr: 0.1->0.0001 max 100" \
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder tune - lr: 0.01->0.0001 max 100" \
 --data_dir $(pwd)/pickled \
 --comet_storage $(pwd)/comet_storage_tune \
 --accelerator cpu \
---batch_size 3 \
---ray_nodes 12 \
---num_workers 8 \
+--batch_size 4 \
+--ray_nodes 4 \
+--num_workers 4 \
 --embed_size 96 \
 --hidden_size 256 \
+--l_rate 0.01 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 100 \
 --limit_train_batches 250 --limit_val_batches 250
