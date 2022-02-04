@@ -14,7 +14,7 @@ cd $SLURM_WORKDIR
 echo "nodes: ${SLURM_NODELIST}"
 
 python $(pwd)/cp_learning/ae_processor_mpi.py  --exp_label "autoencoder lr: 0.005->0.0001 max 100" \
---run_id "mpi tune 4-32-40"
+--run_id "mpi tune 4-32-40" \
 --data_dir $(pwd)/pickled \
 --comet_storage $(pwd)/comet_storage_tune \
 --accelerator cpu \
