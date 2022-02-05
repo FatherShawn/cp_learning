@@ -1,7 +1,6 @@
 from autoencoder import item_path
 from cp_tokenized_data import concatenate_data
 from cp_dataset import QuackIterableDataset
-from progress.bar import IncrementalBar
 from argparse import ArgumentParser
 from pathlib import Path
 import pickle
@@ -41,38 +40,37 @@ def main() -> None:
             'length': 0
         }
 
-    with IncrementalBar('Re-mapping', max=length) as bar:
-        for index in range(start, end):
-            item = dataset[index]
-            meta = item['metadata']
-            # Ensure storage is ready.
-            storage_path = Path(args.storage_path + item_path(count, dir_only=True, is_collection=True))
-            storage_path.mkdir(parents=True, exist_ok=True)
-            image_storage = Path(args.storage_path + item_path(count, 'png', is_collection=True))
-            data_storage = Path(args.storage_path + item_path(count, 'pyc', is_collection=True))
-            # Count:
-            if meta['censored'] == 1:
-                metadata['censored'] += 1
-            elif meta['censored'] == 0:
-                if args.filtered:
-                    bar.next()
-                    continue
-                else:
-                    metadata['undetermined'] += 1
-            elif meta['censored'] == -1:
-                metadata['uncensored'] += 1
-            # Store:
-            pixels = nparray2png(concatenate_data(item))
-            data = {
-                'metadata': meta,
-                'pixels': pixels
-            }
-            with data_storage.open(mode='wb') as target:
-                pickle.dump(data, target)
-            generated_image = Image.fromarray(pixels, mode='L')
-            generated_image.save(image_storage)
-            count += 1
-            bar.next()
+    for index in range(start, end):
+        item = dataset[index]
+        meta = item['metadata']
+        # Ensure storage is ready.
+        storage_path = Path(args.storage_path + item_path(count, dir_only=True, is_collection=True))
+        storage_path.mkdir(parents=True, exist_ok=True)
+        image_storage = Path(args.storage_path + item_path(count, 'png', is_collection=True))
+        data_storage = Path(args.storage_path + item_path(count, 'pyc', is_collection=True))
+        # Count:
+        if meta['censored'] == 1:
+            metadata['censored'] += 1
+        elif meta['censored'] == 0:
+            if args.filtered:
+                continue
+            else:
+                metadata['undetermined'] += 1
+        elif meta['censored'] == -1:
+            metadata['uncensored'] += 1
+        # Store:
+        pixels = nparray2png(concatenate_data(item))
+        data = {
+            'metadata': meta,
+            'pixels': pixels
+        }
+        with data_storage.open(mode='wb') as target:
+            pickle.dump(data, target)
+        generated_image = Image.fromarray(pixels, mode='L')
+        generated_image.save(image_storage)
+        count += 1
+        if count % 10000 == 0:
+            print(f'Processed {count:,} items.')
     metadata['length'] = count
     with root_meta.open(mode='wb') as stored_dict:
         pickle.dump(metadata, stored_dict)
