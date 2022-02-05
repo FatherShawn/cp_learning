@@ -1,7 +1,5 @@
 # You must import Comet before these modules: torch
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
-import random
-
 import comet_ml
 from time import gmtime, strftime
 from cp_flatten import QuackConstants
@@ -10,7 +8,6 @@ from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
-from pytorch_lightning.plugins.training_type import DDPPlugin
 from argparse import ArgumentParser, Namespace
 
 
@@ -30,7 +27,6 @@ def main(args: Namespace) -> None:
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
-
     if args.tune:
         trainer = Trainer.from_argparse_args(
             args, auto_scale_batch_size=True
@@ -48,10 +44,11 @@ def main(args: Namespace) -> None:
             storage_path=args.storage_path,
             filtered=args.filtered
         )
+        lr_monitor = LearningRateMonitor(logging_interval='epoch')
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger]
+            callbacks=[writer_callback, device_logger, lr_monitor]
         )
         model.freeze()
         print('Ready for inference...')
@@ -60,14 +57,12 @@ def main(args: Namespace) -> None:
         else:
             trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
     else:
-        lr_monitor = LearningRateMonitor(logging_interval='epoch')
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
             save_dir=args.comet_storage,
             project_name="censored-planet",
             experiment_name=f'{args.exp_label}: {date_time}',
         )
-        comet_logger.experiment.log_parameter('run_id', args.run_id)
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
@@ -82,8 +77,8 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            strategy=DDPPlugin(find_unused_parameters=False),
-            callbacks=[early_stopping_callback, checkpoint_callback, device_logger, lr_monitor]
+            strategy='horovod',
+            callbacks=[early_stopping_callback, checkpoint_callback, device_logger]
         )
         print('Ready for training...')
         if args.checkpoint_path is None:
@@ -110,7 +105,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)
     arg_parser.add_argument('--l_rate_max_epoch', type=int, default=-1)
     arg_parser.add_argument('--exp_label', type=str, default='autoencoder-train')
-    arg_parser.add_argument('--run_id', type=str)
+    arg_parser.add_argument('--ray_nodes', type=int, default=4)
 
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)
