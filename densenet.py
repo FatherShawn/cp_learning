@@ -31,7 +31,7 @@ class QuackDenseNet(pl.LightningModule):
         x: pt.Tensor
             The input, which should be (B, 3, H, W) shaped, where:
             B: batch size
-            3: Densnet is trained on RGB = e channels
+            3: Densnet is trained on RGB = 3 channels
             H: height
             W: width
 

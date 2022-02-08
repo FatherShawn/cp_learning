@@ -11,7 +11,7 @@ from typing import List
 
 
 def pad_right(batch: List[dict]) -> pt.Tensor:
-    '''
+    """
     Receives a list of Tensors with B elements.  Calculates the widest tensor, which is length T. Pads all
     narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
 
@@ -23,7 +23,7 @@ def pad_right(batch: List[dict]) -> pt.Tensor:
     Returns
     -------
     pt.Tensor
-    '''
+    """
     data = []
     for item in batch:
         data.append(pt.from_numpy(concatenate_data(item)))
@@ -33,7 +33,7 @@ def pad_right(batch: List[dict]) -> pt.Tensor:
     return pt.stack(batch_padded)
 
 def pad_right_with_meta(batch: List[dict]) -> Tuple[List[dict], pt.Tensor]:
-    '''
+    """
     Receives a list of TokenizedQuackData with B elements.  Calculates the widest tensor, which is length T. Pads all
     narrower tensors to T with zeros.  Returns a (B x T) shaped tensor.
 
@@ -44,8 +44,9 @@ def pad_right_with_meta(batch: List[dict]) -> Tuple[List[dict], pt.Tensor]:
 
     Returns
     -------
-    pt.Tensor
-    '''
+    Tuple[List[dict], pt.Tensor]
+        A tuple of a list of metadata and a batch tensor.
+    """
     data = []
     meta = []
     for item in batch:
