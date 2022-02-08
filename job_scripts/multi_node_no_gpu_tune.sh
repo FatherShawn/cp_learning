@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name="18-batch"
+#SBATCH --job-name="init_lr:0.005"
 #SBATCH --partition production
-#SBATCH --nodes=4
-#SBATCH --ntasks=32
+#SBATCH --nodes=8
+#SBATCH --ntasks=64
 #SBATCH --tasks-per-node=8
-#SBATCH --mem=40Gb
+#SBATCH --mem=44Gb
 
 # Auto resubm
 #SBATCH --signal=SIGUSR1@90
@@ -70,16 +70,16 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder tune - lr: 0.01->0.0001 max 100" \
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder init_lr:0.005" \
 --data_dir $(pwd)/pickled \
 --comet_storage $(pwd)/comet_storage_tune \
 --accelerator cpu \
---batch_size 4 \
---ray_nodes 4 \
---num_workers 4 \
+--batch_size 2 \
+--ray_nodes 8 \
+--num_workers 6 \
 --embed_size 96 \
 --hidden_size 256 \
---l_rate 0.01 \
+--l_rate 0.005 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 100 \
 --limit_train_batches 250 --limit_val_batches 250

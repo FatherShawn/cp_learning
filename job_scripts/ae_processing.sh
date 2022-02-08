@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name="autoEncoderTraining"
 #SBATCH --partition production
-#SBATCH --nodes=4
-#SBATCH --ntasks=32
+#SBATCH --nodes=8
+#SBATCH --ntasks=64
 #SBATCH --tasks-per-node=8
-#SBATCH --mem=40Gb
+#SBATCH --mem=44Gb
 
-
-# Auto resubmit.
+# Auto resubm
 #SBATCH --signal=SIGUSR1@90
 
 # change to the working directory
@@ -71,16 +70,17 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder restart - lr: 0.1->0.0001 max 100" \
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder restart from epoch 40" \
 --data_dir $(pwd)/pickled \
 --comet_storage $(pwd)/comet_storage_restart \
 --accelerator cpu \
---batch_size 4 \
---ray_nodes 4 \
---num_workers 4 \
+--batch_size 2 \
+--ray_nodes 8 \
+--num_workers 6 \
 --embed_size 96 \
 --hidden_size 256 \
---l_rate 0.1 \
+--l_rate 0.005 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 100 \
---limit_train_batches 250 --limit_val_batches 250
+--limit_train_batches 0.2 \
+--checkpoint_path $(pwd)/archived-checkpoints/epoch-40-step-178853.ckpt
