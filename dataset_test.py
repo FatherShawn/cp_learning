@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from cp_dataset import QuackIterableDataset
-from cp_processor import verify_returned_item
+from cp_flatten_processor import verify_returned_item
 
 def main():
     # Add args to make a more flexible cli tool.

@@ -32,7 +32,7 @@ class QuackImageDataset(Dataset):
     Each QuackImageData stores one numpy arrays:
     'pixels': A (224, 224) numpy array of pixel data
         See cp_flatten.CensoredPlanetFlatten.__process_row
-        See cp_image_processor.py
+        See cp_image_reprocessor.py
     """
 
     def __init__(self, path: str) -> None:
