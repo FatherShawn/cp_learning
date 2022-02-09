@@ -6,7 +6,7 @@
 #SBATCH --tasks-per-node=8
 #SBATCH --mem=44Gb
 
-# Auto resubm
+# Auto re-submit
 #SBATCH --signal=SIGUSR1@90
 
 # change to the working directory
