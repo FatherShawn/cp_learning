@@ -2,12 +2,14 @@
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
 from time import gmtime, strftime
+from pathlib import Path
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
 from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
+from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector
 from ray_lightning import RayPlugin
 from argparse import ArgumentParser, Namespace
 
@@ -31,9 +33,10 @@ def main(args: Namespace) -> None:
         use_gpu=False,
         find_unused_parameters=False
     )
-    # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
+    checkpoint_storage = Path(args.checkpoint_path)
+    checkpoint_storage.mkdir(parents=True, exist_ok=True)
     if args.tune:
         trainer = Trainer.from_argparse_args(
             args, auto_scale_batch_size=True,
@@ -42,8 +45,8 @@ def main(args: Namespace) -> None:
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     elif args.encode:
+        # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         comet_logger = CometLogger(
-            save_dir=args.comet_storage,
             project_name="censored-planet",
             experiment_name=f'autoencoder-encode: {date_time}',
         )
@@ -66,16 +69,17 @@ def main(args: Namespace) -> None:
         else:
             trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
     else:
+        # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
-            save_dir=args.comet_storage,
             project_name="censored-planet",
             experiment_name=f'{args.exp_label}: {date_time}',
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
-            save_last=True
+            dirpath=checkpoint_storage,
+            every_n_train_steps=2000
         )
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
@@ -87,13 +91,11 @@ def main(args: Namespace) -> None:
             args,
             logger=comet_logger,
             callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
-            plugins=[ray_plugin]
+            plugins=[ray_plugin],
+            weights_save_path=checkpoint_storage
         )
         print('Ready for training...')
-        if args.checkpoint_path is None:
-            trainer.fit(model, datamodule=data)
-        else:
-            trainer.fit(model, datamodule=data, ckpt_path=args.checkpoint_path)
+        trainer.fit(model, datamodule=data)
 
 
 if __name__ == '__main__':
@@ -107,8 +109,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--tune', action='store_true', default=False)
     arg_parser.add_argument('--encode', action='store_true', default=False)
     arg_parser.add_argument('--filtered', action='store_true', default=False)
-    arg_parser.add_argument('--checkpoint_path', type=str)
-    arg_parser.add_argument('--comet_storage', type=str, default='.')
+    arg_parser.add_argument('--checkpoint_path', type=str, default='~/checkpoints')
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)

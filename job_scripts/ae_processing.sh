@@ -70,9 +70,8 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder restart from epoch 40" \
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder retry-restart from epoch 40" \
 --data_dir $(pwd)/pickled \
---comet_storage $(pwd)/comet_storage_restart \
 --accelerator cpu \
 --batch_size 2 \
 --ray_nodes 8 \
@@ -83,4 +82,4 @@ python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder restart from
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 100 \
 --limit_train_batches 0.2 \
---checkpoint_path $(pwd)/archived-checkpoints/epoch-40-step-178853.ckpt
+--checkpoint_path $(pwd)/auto_checkpoints/
