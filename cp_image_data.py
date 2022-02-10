@@ -1,13 +1,10 @@
 from typing import Tuple, List, Union, Callable
 import torch as pt
 import pytorch_lightning as pl
-import numpy as np
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
-from torch.nn import functional as F
 from cp_image_dataset import QuackImageDataset
-from cp_flatten import QuackConstants
 
 
 class QuackImageTransformer:
@@ -89,7 +86,7 @@ class QuackImageTransformer:
         return pt.stack(data), meta
 
 
-class QuackTokenizedDataModule(pl.LightningDataModule):
+class QuackImageDataModule(pl.LightningDataModule):
     def __init__(self, data_dir: str, batch_size: int = 64, workers: int = 0):
         self.__batch_size = batch_size
         self.__workers = workers

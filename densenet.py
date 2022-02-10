@@ -1,14 +1,23 @@
-from typing import Any, List, Optional, Sequence, Tuple, Dict
+from pytorch_lightning.utilities.types import STEP_OUTPUT, EPOCH_OUTPUT
+from typing import Any, List, Optional, TypedDict, Tuple, Dict
 
 
 import torch as pt
 from torch import nn
 from torchvision import models
-import numpy as np
-from cp_flatten import QuackConstants
-import torch.nn.functional as F
 import pytorch_lightning as pl
+import torchmetrics as tm
 
+
+class QuackMetric(TypedDict):
+    accuracy: tm.Accuracy
+    f1: tm.F1Score
+    auroc: tm.AUROC
+
+
+class QuackMetricSet(TypedDict):
+    train: QuackMetric
+    val: QuackMetric
 
 class QuackDenseNet(pl.LightningModule):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -22,6 +31,21 @@ class QuackDenseNet(pl.LightningModule):
         classifier_features_in = pre_trained.classifier.in_features
         pre_trained.classifier = nn.Linear(classifier_features_in, 1)
         self.__densenet = pre_trained
+        train_metric = QuackMetric(
+            accuracy=tm.Accuracy(),
+            f1=tm.F1Score(num_classes=2),
+            auroc=tm.AUROC(num_classes=2)
+        )
+        val_metric = QuackMetric(
+            accuracy=tm.Accuracy(),
+            f1=tm.F1Score(num_classes=2),
+            auroc=tm.AUROC(num_classes=2)
+        )
+        self.__metrics = QuackMetricSet(
+            train=train_metric,
+            val=val_metric
+        )
+        self.__bce = nn.BCELoss()
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         """
@@ -43,36 +67,47 @@ class QuackDenseNet(pl.LightningModule):
         """
         return self.__densenet(x)
 
-    def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> pt.Tensor:
+    def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> Tuple[pt.Tensor, pt.Tensor, pt.Tensor]:
         inputs, labels = x
-        cross_entropy = nn.CrossEntropyLoss()
         outputs = self.forward(inputs)
-        loss = cross_entropy(outputs, labels)
+        output_labels = outputs.ge(0.5).long()  # Binarize predictions to 0 and 1
+        loss = self.__bce(outputs, labels)
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True
         self.log(f"{step_id}_loss", loss, on_step=log_interval_option, sync_dist=log_sync)
-        return loss
+        return loss, labels, output_labels
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
-        return {'loss': self._common_step(x, batch_index, 'train')}
+        loss, expected, predicted = self._common_step(x, batch_index, 'train')
+        return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
-    def validation_step(self, x: pt.Tensor, batch_index: int) -> float:
-        return self._common_step(x, batch_index, 'val')
+    def validation_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        loss, expected, predicted = self._common_step(x, batch_index, 'val')
+        return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
-    def test_step(self, x: pt.Tensor, batch_index: int) -> float:
-        return self._common_step(x, batch_index, 'test')
+    def test_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        loss, expected, predicted = self._common_step(x, batch_index, 'test')
+        return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
         inputs, _ = batch
         return self.forward(inputs)
 
-    def configure_optimizers(self) -> Dict:
-        configured_optimizer = pt.optim.AdamW(self.parameters(), lr=self.__learning_rate_init)
-        return {
-            'optimizer': configured_optimizer,
-            'lr_scheduler': pt.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer=configured_optimizer,
-                T_max=self.__lr_max_epochs,
-                eta_min=self.__learning_rate_min
-            )
-        }
+    def training_step_end(self, outputs: dict, *args, **kwargs):
+        self.__metrics['train']['accuracy'](outputs['predicted'], outputs['expected'])
+        self.log('train_acc', self.__metrics['train']['accuracy'])
+        self.__metrics['train']['f1'](outputs['predicted'], outputs['expected'])
+        self.log('train_f1', self.__metrics['train']['f1'])
+        self.__metrics['train']['auroc'](outputs['predicted'], outputs['expected'])
+        self.log('train_auroc',  self.__metrics['train']['auroc'])
+
+    def validation_step_end(self, outputs: dict, *args, **kwargs):
+        self.__metrics['val']['accuracy'].update(outputs['predicted'], outputs['expected'])
+        self.__metrics['val']['f1'].update(outputs['predicted'], outputs['expected'])
+        self.__metrics['train']['auroc'].update(outputs['predicted'], outputs['expected'])
+
+    def validation_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
+        super().validation_epoch_end(outputs)
+
+
+
