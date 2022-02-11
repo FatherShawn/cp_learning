@@ -59,7 +59,6 @@ class QuackImageDataset(Dataset):
         self.__censored = metadata['censored']
         self.__undetermined = metadata['undetermined']
         self.__uncensored = metadata['uncensored']
-        self.__max_width = metadata['max_width']
 
     def __iter__(self) -> Iterator[QuackImageData]:
         """

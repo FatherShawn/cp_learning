@@ -15,6 +15,7 @@ class QuackImageTransformer:
         if step_type not in valid_types:
             raise ValueError('Improper transform step_type.')
         self.__type = step_type
+        # For normalize configuration, see https://pytorch.org/hub/pytorch_vision_densenet/
         if self.__type == 'train':
             self.__transforms = transforms.Compose([
                 transforms.RandomResizedCrop(size=224, interpolation=transforms.InterpolationMode.NEAREST),
@@ -55,7 +56,7 @@ class QuackImageTransformer:
         labels = []
         for item in batch:
             image = pt.from_numpy(item['pixels'])
-            image = self.__transforms(image)
+            image = self.__transforms(image.to(pt.float))
             data.append(image)
             censored = 0
             if item['metadata']['censored'] == 1:
@@ -80,7 +81,7 @@ class QuackImageTransformer:
         meta = []
         for item in batch:
             image = pt.from_numpy(item['pixels'])
-            image = self.__transforms(image)
+            image = self.__transforms(image.to(pt.float))
             data.append(image)
             meta.append(item['metadata'])
         return pt.stack(data), meta
