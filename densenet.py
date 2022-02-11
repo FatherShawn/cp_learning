@@ -15,10 +15,6 @@ class QuackMetric(TypedDict):
     auroc: tm.AUROC
 
 
-class QuackMetricSet(TypedDict):
-    train: QuackMetric
-    val: QuackMetric
-
 class QuackDenseNet(pl.LightningModule):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -31,19 +27,15 @@ class QuackDenseNet(pl.LightningModule):
         classifier_features_in = pre_trained.classifier.in_features
         pre_trained.classifier = nn.Linear(classifier_features_in, 1)
         self.__densenet = pre_trained
-        train_metric = QuackMetric(
+        self.__train_metric = QuackMetric(
             accuracy=tm.Accuracy(),
             f1=tm.F1Score(num_classes=2),
             auroc=tm.AUROC(num_classes=2)
         )
-        val_metric = QuackMetric(
+        self.__val_metric = QuackMetric(
             accuracy=tm.Accuracy(),
             f1=tm.F1Score(num_classes=2),
             auroc=tm.AUROC(num_classes=2)
-        )
-        self.__metrics = QuackMetricSet(
-            train=train_metric,
-            val=val_metric
         )
         self.__bce = nn.BCELoss()
 
@@ -90,24 +82,29 @@ class QuackDenseNet(pl.LightningModule):
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
-        inputs, _ = batch
-        return self.forward(inputs)
+        inputs, meta = batch
+        return self.forward(inputs), meta
 
     def training_step_end(self, outputs: dict, *args, **kwargs):
-        self.__metrics['train']['accuracy'](outputs['predicted'], outputs['expected'])
-        self.log('train_acc', self.__metrics['train']['accuracy'])
-        self.__metrics['train']['f1'](outputs['predicted'], outputs['expected'])
-        self.log('train_f1', self.__metrics['train']['f1'])
-        self.__metrics['train']['auroc'](outputs['predicted'], outputs['expected'])
-        self.log('train_auroc',  self.__metrics['train']['auroc'])
+        self.__train_metric['accuracy'](outputs['predicted'], outputs['expected'])
+        self.log('train_acc', self.__train_metric['accuracy'])
+        self.__train_metric['f1'](outputs['predicted'], outputs['expected'])
+        self.log('train_f1', self.__train_metric['f1'])
+        self.__train_metric['auroc'](outputs['predicted'], outputs['expected'])
+        self.log('train_auroc',  self.__train_metric['auroc'])
 
     def validation_step_end(self, outputs: dict, *args, **kwargs):
-        self.__metrics['val']['accuracy'].update(outputs['predicted'], outputs['expected'])
-        self.__metrics['val']['f1'].update(outputs['predicted'], outputs['expected'])
-        self.__metrics['train']['auroc'].update(outputs['predicted'], outputs['expected'])
+        self.__val_metric['accuracy'].update(outputs['predicted'], outputs['expected'])
+        self.__val_metric['f1'].update(outputs['predicted'], outputs['expected'])
+        self.__val_metric['auroc'].update(outputs['predicted'], outputs['expected'])
 
     def validation_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
-        super().validation_epoch_end(outputs)
+        self.__val_metric['accuracy'].compute()
+        self.__val_metric['f1'].compute()
+        self.__val_metric['auroc'].compute()
+        self.log('val_acc', self.__val_metric['accuracy'])
+        self.log('val_f1', self.__val_metric['f1'])
+        self.log('val_auroc', self.__val_metric['auroc'])
 
 
 
