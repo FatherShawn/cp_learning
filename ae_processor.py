@@ -2,6 +2,7 @@
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
 from time import gmtime, strftime
+from datetime import timedelta
 from pathlib import Path
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
@@ -76,6 +77,7 @@ def main(args: Namespace) -> None:
     else:
         checkpoint_storage = Path(args.storage_path)
         checkpoint_storage.mkdir(parents=True, exist_ok=True)
+        checkpoint_interval = timedelta(hours=4)
         # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
@@ -86,7 +88,7 @@ def main(args: Namespace) -> None:
             monitor="val_loss",
             save_top_k=3,
             dirpath=checkpoint_storage,
-            every_n_train_steps=2000
+            train_time_interval=checkpoint_interval
         )
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
