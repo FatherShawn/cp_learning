@@ -14,7 +14,7 @@ cd $SLURM_WORKDIR
 echo "nodes: ${SLURM_NODELIST}"
 
 # __doc_head_address_start__
-redis_password = $(uuidgen)
+redis_password=$(uuidgen)
 export redis_password
 
 # Getting the node names
