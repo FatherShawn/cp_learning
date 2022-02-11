@@ -27,6 +27,13 @@ def main(args: Namespace) -> None:
         learning_rate_min=args.l_rate_min,
         lr_max_epochs=args.l_rate_max_epoch
     )
+    if args.checkpoint_path is not None:
+        model = QuackAutoEncoder.load_from_checkpoint(
+            args.checkpoint_path,
+            learning_rate=args.l_rate,
+            learning_rate_min=args.l_rate_min,
+            lr_max_epochs=args.l_rate_max_epoch
+        )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
@@ -35,8 +42,6 @@ def main(args: Namespace) -> None:
     )
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
-    checkpoint_storage = Path(args.checkpoint_path)
-    checkpoint_storage.mkdir(parents=True, exist_ok=True)
     if args.tune:
         trainer = Trainer.from_argparse_args(
             args, auto_scale_batch_size=True,
@@ -69,6 +74,8 @@ def main(args: Namespace) -> None:
         else:
             trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
     else:
+        checkpoint_storage = Path(args.storage_path)
+        checkpoint_storage.mkdir(parents=True, exist_ok=True)
         # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
@@ -109,7 +116,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--tune', action='store_true', default=False)
     arg_parser.add_argument('--encode', action='store_true', default=False)
     arg_parser.add_argument('--filtered', action='store_true', default=False)
-    arg_parser.add_argument('--checkpoint_path', type=str, default='~/checkpoints')
+    arg_parser.add_argument('--checkpoint_path', type=str)
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)

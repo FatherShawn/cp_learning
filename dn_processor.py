@@ -22,7 +22,6 @@ def main(args: Namespace) -> None:
         use_gpu=False,
         find_unused_parameters=False
     )
-    # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
     if args.tune:
@@ -33,15 +32,19 @@ def main(args: Namespace) -> None:
         print('Ready for tuning...')
         trainer.tune(model, datamodule=data)
     else:
+        checkpoint_storage = Path(args.storage_path)
+        checkpoint_storage.mkdir(parents=True, exist_ok=True)
+        # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
+        # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
-            save_dir=args.comet_storage,
             project_name="censored-planet",
             experiment_name=f'{args.exp_label}: {date_time}',
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
-            save_last=True
+            dirpath=checkpoint_storage,
+            every_n_train_steps=2000
         )
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
@@ -53,13 +56,11 @@ def main(args: Namespace) -> None:
             args,
             logger=comet_logger,
             callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
-            plugins=[ray_plugin]
+            plugins=[ray_plugin],
+            weights_save_path=checkpoint_storage
         )
         print('Ready for training...')
-        if args.checkpoint_path is None:
-            trainer.fit(model, datamodule=data)
-        else:
-            trainer.fit(model, datamodule=data, ckpt_path=args.checkpoint_path)
+        trainer.fit(model, datamodule=data)
 
 
 if __name__ == '__main__':
