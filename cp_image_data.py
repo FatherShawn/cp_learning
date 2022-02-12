@@ -58,9 +58,9 @@ class QuackImageTransformer:
             image = pt.from_numpy(item['pixels'])
             image = self.__transforms(image.to(pt.float))
             data.append(image)
-            censored = pt.tensor([0])
+            censored = pt.tensor([0]).to(pt.float)
             if item['metadata']['censored'] == 1:
-                censored = pt.tensor([1])
+                censored = pt.tensor([1]).to(pt.float)
             labels.append(censored)
         return pt.stack(data), pt.stack(labels)
 

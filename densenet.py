@@ -71,7 +71,10 @@ class QuackDenseNet(pl.LightningModule):
     def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> Tuple[pt.Tensor, pt.Tensor, pt.Tensor]:
         inputs, labels = x
         outputs = self.forward(inputs)
-        output_labels = outputs.ge(0.5).long()  # Binarize predictions to 0 and 1
+        # Binarize predictions to 0 and 1.
+        output_labels = outputs.ge(0.5).long()
+        # Then match to labels type.
+        output_labels = output_labels.to(pt.float)
         ###############################
         #      File "/scratch/shawn_bc_10/.venv/lib/python3.8/site-packages/torch/nn/functional.py", line 2982, in binary_cross_entropy_with_logits
         #     return torch.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction_enum)
