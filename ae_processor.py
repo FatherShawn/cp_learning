@@ -10,7 +10,6 @@ from autoencoder import QuackAutoEncoder, AutoencoderWriter
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
-from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector
 from ray_lightning import RayPlugin
 from argparse import ArgumentParser, Namespace
 

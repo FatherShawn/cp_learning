@@ -20,12 +20,12 @@ class QuackImageTransformer:
             self.__transforms = transforms.Compose([
                 transforms.RandomResizedCrop(size=224, interpolation=transforms.InterpolationMode.NEAREST),
                 transforms.RandomHorizontalFlip(),
-                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
+                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         if self.__type == 'val' or self.__type == 'predict':
             self.__transforms = transforms.Compose([
-                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
+                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
 
