@@ -75,10 +75,6 @@ class QuackDenseNet(pl.LightningModule):
         output_labels = outputs.ge(0.5).long()
         # Then match to labels type.
         output_labels = output_labels.to(pt.float)
-        ###############################
-        #      File "/scratch/shawn_bc_10/.venv/lib/python3.8/site-packages/torch/nn/functional.py", line 2982, in binary_cross_entropy_with_logits
-        #     return torch.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction_enum)
-        # RuntimeError: result type Float can't be cast to the desired output type Long
         loss = self.__loss_module(outputs, labels)
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True
