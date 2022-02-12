@@ -18,9 +18,9 @@ class QuackImageTransformer:
         # For normalize configuration, see https://pytorch.org/hub/pytorch_vision_densenet/
         if self.__type == 'train':
             self.__transforms = transforms.Compose([
+                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.RandomResizedCrop(size=224, interpolation=transforms.InterpolationMode.NEAREST),
                 transforms.RandomHorizontalFlip(),
-                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         if self.__type == 'val' or self.__type == 'predict':

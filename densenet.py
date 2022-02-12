@@ -8,11 +8,6 @@ import pytorch_lightning as pl
 import torchmetrics as tm
 
 
-class QuackMetric(TypedDict):
-    accuracy: tm.Accuracy
-    f1: tm.F1Score
-
-
 class QuackDenseNet(pl.LightningModule):
     def __init__(self, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
                  lr_max_epochs: int = -1, *args: Any, **kwargs: Any) -> None:
@@ -30,14 +25,10 @@ class QuackDenseNet(pl.LightningModule):
         self.__learning_rate_init = learning_rate
         self.__learning_rate_min = learning_rate_min
         self.__lr_max_epochs = lr_max_epochs
-        self.__train_metric = QuackMetric(
-            accuracy=tm.Accuracy(),
-            f1=tm.F1Score(num_classes=2)
-        )
-        self.__val_metric = QuackMetric(
-            accuracy=tm.Accuracy(),
-            f1=tm.F1Score(num_classes=2)
-        )
+        self.__train_acc = tm.Accuracy();
+        self.__train_f1 = tm.F1Score(num_classes=2);
+        self.__val_acc = tm.Accuracy();
+        self.__val_f1 = tm.F1Score(num_classes=2);
         # We have 653481 uncensored (negative samples) and 215016 positive samples in our dataset.
         # 653481 / 215016 = 3.0392203371
         balance_factor = pt.tensor(3.039)
@@ -99,20 +90,20 @@ class QuackDenseNet(pl.LightningModule):
         return self.forward(inputs), meta
 
     def training_step_end(self, outputs: dict, *args, **kwargs):
-        self.__train_metric['accuracy'](outputs['predicted'], outputs['expected'])
-        self.log('train_acc', self.__train_metric['accuracy'])
-        self.__train_metric['f1'](outputs['predicted'], outputs['expected'])
-        self.log('train_f1', self.__train_metric['f1'])
+        self.__train_acc(outputs['predicted'], outputs['expected'])
+        self.log('train_acc', self.__train_acc)
+        self.__train_f1(outputs['predicted'], outputs['expected'])
+        self.log('train_f1', self.__train_f1)
 
     def validation_step_end(self, outputs: dict, *args, **kwargs):
-        self.__val_metric['accuracy'].update(outputs['predicted'], outputs['expected'])
-        self.__val_metric['f1'].update(outputs['predicted'], outputs['expected'])
+        self.__val_acc.update(outputs['predicted'], outputs['expected'])
+        self.__val_f1.update(outputs['predicted'], outputs['expected'])
 
     def validation_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
-        self.__val_metric['accuracy'].compute()
-        self.__val_metric['f1'].compute()
-        self.log('val_acc', self.__val_metric['accuracy'])
-        self.log('val_f1', self.__val_metric['f1'])
+        self.__val_acc.compute()
+        self.__val_f1.compute()
+        self.log('val_acc', self.__val_acc)
+        self.log('val_f1', self.__val_f1)
 
     def configure_optimizers(self):
         parameters = list(self.parameters())
@@ -121,7 +112,7 @@ class QuackDenseNet(pl.LightningModule):
             f"The model will start training with only {len(trainable_parameters)} "
             f"trainable parameters out of {len(parameters)}."
         )
-        configured_optimizer = pt.optim.AdamW(trainable_parameters, lr=self.__learning_rate_init)
+        configured_optimizer = pt.optim.AdamW(params=trainable_parameters, lr=self.__learning_rate_init)
         return {
             'optimizer': configured_optimizer,
             'lr_scheduler': pt.optim.lr_scheduler.CosineAnnealingLR(
