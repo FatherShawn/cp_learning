@@ -79,7 +79,8 @@ class QuackDenseNet(pl.LightningModule):
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True
         self.log(f"{step_id}_loss", loss, on_step=log_interval_option, sync_dist=log_sync)
-        return loss, labels, output_labels
+        # Return labels and output_labels for use in accuracy, which expects integer tensors.
+        return loss, labels.to(pt.int8), output_labels.to(pt.int8)
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
         loss, expected, predicted = self._common_step(x, batch_index, 'train')
