@@ -79,4 +79,4 @@ python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet autotune" \
 --accelerator cpu \
 --tune \
 --ray_nodes 8 \
---num_workers 6 \
+--num_workers 6

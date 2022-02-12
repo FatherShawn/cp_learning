@@ -26,6 +26,7 @@ class QuackDenseNet(pl.LightningModule):
         classifier_features_in = pre_trained.classifier.in_features
         pre_trained.classifier = nn.Linear(classifier_features_in, 1)
         self.__densenet = pre_trained
+        self.__to_probability = nn.Sigmoid()
         self.__learning_rate_init = learning_rate
         self.__learning_rate_min = learning_rate_min
         self.__lr_max_epochs = lr_max_epochs
@@ -62,12 +63,19 @@ class QuackDenseNet(pl.LightningModule):
             The output, which should be (B, 1) sized, of single probability floats.
 
         """
-        return self.__densenet(x)
+        # Densenet outputs an un-normalized confidence score.
+        # Use sigmoid to transform to a probability.
+        confidence = self.__densenet(x)
+        return self.__to_probability(confidence)
 
     def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> Tuple[pt.Tensor, pt.Tensor, pt.Tensor]:
         inputs, labels = x
         outputs = self.forward(inputs)
         output_labels = outputs.ge(0.5).long()  # Binarize predictions to 0 and 1
+        ###############################
+        #      File "/scratch/shawn_bc_10/.venv/lib/python3.8/site-packages/torch/nn/functional.py", line 2982, in binary_cross_entropy_with_logits
+        #     return torch.binary_cross_entropy_with_logits(input, target, weight, pos_weight, reduction_enum)
+        # RuntimeError: result type Float can't be cast to the desired output type Long
         loss = self.__loss_module(outputs, labels)
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True

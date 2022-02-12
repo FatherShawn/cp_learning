@@ -58,11 +58,11 @@ class QuackImageTransformer:
             image = pt.from_numpy(item['pixels'])
             image = self.__transforms(image.to(pt.float))
             data.append(image)
-            censored = 0
+            censored = pt.tensor([0])
             if item['metadata']['censored'] == 1:
-                censored = 1
+                censored = pt.tensor([1])
             labels.append(censored)
-        return pt.stack(data), pt.tensor(labels)
+        return pt.stack(data), pt.stack(labels)
 
     def __collate_predict(self, batch: List[dict]) -> Tuple[pt.Tensor, List[dict]]:
         """
