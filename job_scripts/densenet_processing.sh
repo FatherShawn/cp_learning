@@ -78,10 +78,10 @@ python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet autotune" \
 --data_dir $(pwd)/as_images \
 --accelerator cpu \
 --batch_size 8 \
---l_rate 0.0033 \
+--l_rate 0.0003 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 60 \
 --ray_nodes 8 \
 --num_workers 6 \
---storage_path $(pwd)/auto_checkpoints \
---limit_train_batches 250 --limit_val_batches 250
+--storage_path $(pwd)/auto_checkpoints/densenet \
+--limit_train_batches 0.1 --limit_val_batches 0.1

@@ -1,3 +1,4 @@
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 from typing import Any, List, Optional, Sequence, Tuple, Dict
 from pathlib import Path
 import pickle

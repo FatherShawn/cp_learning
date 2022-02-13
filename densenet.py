@@ -1,4 +1,4 @@
-from pytorch_lightning.utilities.types import EPOCH_OUTPUT
+from pytorch_lightning.utilities.types import EPOCH_OUTPUT, STEP_OUTPUT
 from pytorch_lightning.utilities.distributed import rank_zero_info
 from typing import Any, List, Optional, TypedDict, Tuple
 import torch as pt
@@ -25,10 +25,12 @@ class QuackDenseNet(pl.LightningModule):
         self.__learning_rate_init = learning_rate
         self.__learning_rate_min = learning_rate_min
         self.__lr_max_epochs = lr_max_epochs
-        self.__train_acc = tm.Accuracy();
-        self.__train_f1 = tm.F1Score(num_classes=2);
-        self.__val_acc = tm.Accuracy();
-        self.__val_f1 = tm.F1Score(num_classes=2);
+        self.__train_acc = tm.Accuracy()
+        self.__train_f1 = tm.F1Score(num_classes=2)
+        self.__val_acc = tm.Accuracy()
+        self.__val_f1 = tm.F1Score(num_classes=2)
+        self.__test_acc = tm.Accuracy()
+        self.__test_f1 = tm.F1Score(num_classes=2)
         # We have 653481 uncensored (negative samples) and 215016 positive samples in our dataset.
         # 653481 / 215016 = 3.0392203371
         balance_factor = pt.tensor(3.039)
@@ -98,6 +100,16 @@ class QuackDenseNet(pl.LightningModule):
     def validation_step_end(self, outputs: dict, *args, **kwargs):
         self.__val_acc.update(outputs['predicted'], outputs['expected'])
         self.__val_f1.update(outputs['predicted'], outputs['expected'])
+
+    def test_step_end(self, outputs: dict, *args, **kwargs):
+        self.__test_acc.update(outputs['predicted'], outputs['expected'])
+        self.__test_f1.update(outputs['predicted'], outputs['expected'])
+
+    def test_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
+        self.__test_acc.compute()
+        self.__test_f1.compute()
+        self.log('test_acc', self.__test_acc)
+        self.log('test_f1', self.__test_f1)
 
     def validation_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         self.__val_acc.compute()

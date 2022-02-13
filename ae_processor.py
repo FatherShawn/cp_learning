@@ -86,8 +86,9 @@ def main(args: Namespace) -> None:
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
-            dirpath=checkpoint_storage,
-            train_time_interval=checkpoint_interval
+            save_last=True,
+            mode='min',
+            dirpath=checkpoint_storage
         )
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",

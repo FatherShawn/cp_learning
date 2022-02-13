@@ -78,8 +78,9 @@ python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder retry-restar
 --num_workers 6 \
 --embed_size 96 \
 --hidden_size 256 \
---l_rate 0.005 \
+--l_rate 0.0033 \
 --l_rate_min 0.0001 \
---l_rate_max_epoch 100 \
---limit_train_batches 0.2 \
---checkpoint_path $(pwd)/auto_checkpoints/
+--l_rate_max_epoch 60 \
+--limit_train_batches 0.005 \
+--limit_val_batches 500 \
+--storage_path $(pwd)/auto_checkpoints/autoencoder
