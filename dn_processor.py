@@ -2,9 +2,7 @@
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
 from time import gmtime, strftime
-from datetime import timedelta
 from pathlib import Path
-from cp_flatten import QuackConstants
 from cp_image_data import QuackImageDataModule
 from densenet import QuackDenseNet
 from pytorch_lightning import Trainer
@@ -20,12 +18,18 @@ def main(args: Namespace) -> None:
         batch_size=args.batch_size,
         workers=args.num_workers
     )
-    # Max value of static is from the ipv4 segments.
     model = QuackDenseNet(
-            learning_rate = args.l_rate,
-            learning_rate_min = args.l_rate_min,
-             lr_max_epochs = args.l_rate_max_epoch
+            learning_rate=args.l_rate,
+            learning_rate_min=args.l_rate_min,
+             lr_max_epochs=args.l_rate_max_epoch
     )
+    if args.checkpoint_path is not None:
+        model = QuackDenseNet.load_from_checkpoint(
+            args.checkpoint_path,
+            learning_rate=args.l_rate,
+            learning_rate_min=args.l_rate_min,
+            lr_max_epochs=args.l_rate_max_epoch
+        )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
@@ -36,7 +40,7 @@ def main(args: Namespace) -> None:
     device_logger = DeviceStatsMonitor()
     checkpoint_storage = Path(args.storage_path)
     checkpoint_storage.mkdir(parents=True, exist_ok=True)
-    checkpoint_interval = timedelta(hours=4)
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
     # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
     # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
     comet_logger = CometLogger(
@@ -48,17 +52,22 @@ def main(args: Namespace) -> None:
         mode='max',
         save_top_k=3,
         save_last=True,
+        every_n_train_steps=2000,
+        auto_insert_metric_name=True,
+        filename='checkpoint_{epoch:02d}-step_{step}-{val_acc:02.2f}',
         dirpath=checkpoint_storage,
     )
     early_stopping_callback = EarlyStopping(
         monitor="val_acc",
+        mode='max',
+        patience=10,
         stopping_threshold=0.95,
         check_finite=True,  # Stops training if the monitored metric becomes NaN or infinite.
     )
     trainer = Trainer.from_argparse_args(
         args,
         logger=comet_logger,
-        callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
+        callbacks=[early_stopping_callback, checkpoint_callback, device_logger, lr_monitor],
         plugins=[ray_plugin],
         weights_save_path=checkpoint_storage
     )

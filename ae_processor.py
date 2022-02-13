@@ -2,7 +2,6 @@
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
 from time import gmtime, strftime
-from datetime import timedelta
 from pathlib import Path
 from cp_flatten import QuackConstants
 from cp_tokenized_data import QuackTokenizedDataModule
@@ -60,11 +59,10 @@ def main(args: Namespace) -> None:
             storage_path=args.storage_path,
             filtered=args.filtered
         )
-        lr_monitor = LearningRateMonitor(logging_interval='epoch')
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger, lr_monitor],
+            callbacks=[writer_callback, device_logger],
             plugins=[ray_plugin]
         )
         model.freeze()
@@ -76,7 +74,7 @@ def main(args: Namespace) -> None:
     else:
         checkpoint_storage = Path(args.storage_path)
         checkpoint_storage.mkdir(parents=True, exist_ok=True)
-        checkpoint_interval = timedelta(hours=4)
+        lr_monitor = LearningRateMonitor(logging_interval='epoch')
         # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
         comet_logger = CometLogger(
@@ -88,6 +86,9 @@ def main(args: Namespace) -> None:
             save_top_k=3,
             save_last=True,
             mode='min',
+            every_n_train_steps=2000,
+            auto_insert_metric_name=True,
+            filename='checkpoint_{epoch:02d}-step_{step}-{val_loss:02.2f}',
             dirpath=checkpoint_storage
         )
         early_stopping_callback = EarlyStopping(
@@ -99,7 +100,7 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[early_stopping_callback, checkpoint_callback, device_logger],
+            callbacks=[early_stopping_callback, checkpoint_callback, device_logger, lr_monitor],
             plugins=[ray_plugin],
             weights_save_path=checkpoint_storage
         )

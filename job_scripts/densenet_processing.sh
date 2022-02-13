@@ -84,4 +84,5 @@ python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet autotune" \
 --ray_nodes 8 \
 --num_workers 6 \
 --storage_path $(pwd)/auto_checkpoints/densenet \
---limit_train_batches 0.1 --limit_val_batches 0.1
+--limit_train_batches 0.2 \
+--checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/densenet_epoch_5.ckpt

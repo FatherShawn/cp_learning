@@ -70,6 +70,9 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
+#\
+#--checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/epoch-40-step-178853.ckpt
+
 python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder retry-restart from epoch 40" \
 --data_dir $(pwd)/pickled \
 --accelerator cpu \
@@ -81,6 +84,6 @@ python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder retry-restar
 --l_rate 0.0033 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 60 \
---limit_train_batches 0.005 \
---limit_val_batches 500 \
+--limit_train_batches 0.1 \
+--limit_val_batches 0.1 \
 --storage_path $(pwd)/auto_checkpoints/autoencoder
