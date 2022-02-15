@@ -27,11 +27,12 @@ class AutoencoderWriter(BasePredictionWriter):
     Extends prediction writer to store encoded Quack data.
     """
 
-    def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False) -> None:
+    def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False) -> None:
         super().__init__(write_interval)
         self.__storage_path = storage_path
         self.__root_meta = Path(storage_path + '/metadata.pyc')
-        self.__filtered = filtered
+        self.__filtered = filtered and not evaluate
+        self.__evaluate = evaluate
         self.__count = 0
         self.__metadata = {
             'censored': 0,
@@ -58,14 +59,20 @@ class AutoencoderWriter(BasePredictionWriter):
             row_meta = meta.pop(0)
             # Count:
             if row_meta['censored'] == 1:
-                self.__metadata['censored'] += 1
+                if self.__evaluate:
+                    continue
+                else:
+                    self.__metadata['censored'] += 1
             elif row_meta['censored'] == 0:
                 if self.__filtered:
                     continue
                 else:
                     self.__metadata['undetermined'] += 1
             elif row_meta['censored'] == -1:
-                self.__metadata['uncensored'] += 1
+                if self.__evaluate:
+                    continue
+                else:
+                    self.__metadata['uncensored'] += 1
 
             # Store:
             data = {

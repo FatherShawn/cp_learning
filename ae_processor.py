@@ -41,14 +41,9 @@ def main(args: Namespace) -> None:
     )
     date_time = strftime("%d %b %Y %H:%M", gmtime())
     device_logger = DeviceStatsMonitor()
-    if args.tune:
-        trainer = Trainer.from_argparse_args(
-            args, auto_scale_batch_size=True,
-            plugins=[ray_plugin]
-        )
-        print('Ready for tuning...')
-        trainer.tune(model, datamodule=data)
-    elif args.encode:
+    checkpoint_storage = Path(args.storage_path)
+    checkpoint_storage.mkdir(parents=True, exist_ok=True)
+    if args.encode:
         # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         comet_logger = CometLogger(
             project_name="censored-planet",
@@ -57,7 +52,8 @@ def main(args: Namespace) -> None:
         writer_callback = AutoencoderWriter(
             write_interval='batch_and_epoch',
             storage_path=args.storage_path,
-            filtered=args.filtered
+            filtered=args.filtered,
+            evaluate=args.evaluate
         )
         trainer = Trainer.from_argparse_args(
             args,
@@ -67,13 +63,8 @@ def main(args: Namespace) -> None:
         )
         model.freeze()
         print('Ready for inference...')
-        if args.checkpoint_path is None:
-            trainer.predict(model, datamodule=data, return_predictions=False)
-        else:
-            trainer.predict(model, datamodule=data, return_predictions=False, ckpt_path=args.checkpoint_path)
+        trainer.predict(model, datamodule=data, return_predictions=False)
     else:
-        checkpoint_storage = Path(args.storage_path)
-        checkpoint_storage.mkdir(parents=True, exist_ok=True)
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
         # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
         # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
@@ -88,7 +79,7 @@ def main(args: Namespace) -> None:
             mode='min',
             every_n_train_steps=2000,
             auto_insert_metric_name=True,
-            filename='checkpoint_{epoch:02d}-step_{step}-{val_loss:02.2f}',
+            filename='checkpoint_{epoch:02d}-{step}-{val_loss:02.2f}',
             dirpath=checkpoint_storage
         )
         early_stopping_callback = EarlyStopping(
@@ -106,6 +97,8 @@ def main(args: Namespace) -> None:
         )
         print('Ready for training...')
         trainer.fit(model, datamodule=data)
+        print('Post fit testing...')
+        trainer.test(ckpt_path='best')
 
 
 if __name__ == '__main__':
@@ -116,9 +109,10 @@ if __name__ == '__main__':
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--embed_size', type=int, default=128)
     arg_parser.add_argument('--hidden_size', type=int, default=512)
-    arg_parser.add_argument('--tune', action='store_true', default=False)
+    arg_parser.add_argument('--test', action='store_true', default=False)
     arg_parser.add_argument('--encode', action='store_true', default=False)
     arg_parser.add_argument('--filtered', action='store_true', default=False)
+    arg_parser.add_argument('--evaluate', action='store_true', default=False)
     arg_parser.add_argument('--checkpoint_path', type=str)
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
