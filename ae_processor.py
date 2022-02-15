@@ -85,7 +85,7 @@ def main(args: Namespace) -> None:
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
             patience=10,
-            stopping_threshold=250,
+            stopping_threshold=200,
             check_finite=True,  # Stops training if the monitored metric becomes NaN or infinite.
         )
         trainer = Trainer.from_argparse_args(

@@ -12,6 +12,26 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import BasePredictionWriter
 
 def item_path(index: int, suffix: str = 'png', dir_only: bool = False, is_collection: bool = False) -> str:
+    """
+    A helper function to construct a file path string given a data item index.
+
+    Parameters
+    ----------
+    index: int
+      The index of the data item.
+    suffix: str
+      The file suffix.
+    dir_only: bool
+      Construct only a path to the enclosing directory.
+    is_collection
+      A data item index refers to a collection of files and not a single file.
+
+    Returns
+    -------
+    str
+        The file path.
+
+    """
     rank_five = index // 100000
     remainder = index - (rank_five * 100000)
     rank_three_four = remainder // 1000
@@ -28,6 +48,20 @@ class AutoencoderWriter(BasePredictionWriter):
     """
 
     def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False) -> None:
+        """
+        Constructor for AutoencoderWriter.
+
+        Parameters
+        ----------
+        write_interval: str
+            See parent class BasePredictionWriter
+        storage_path: str
+            A string file path to the directory in which output will be stored.
+        filtered: bool
+            Should the output be filtered to exclude undetermined items (censored/uncensored only)?
+        evaluate: bool
+            Should the output be filtered to include only undetermined items for model evaluation?
+        """
         super().__init__(write_interval)
         self.__storage_path = storage_path
         self.__root_meta = Path(storage_path + '/metadata.pyc')
@@ -44,6 +78,9 @@ class AutoencoderWriter(BasePredictionWriter):
     def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
                            batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
                            dataloader_idx: int) -> None:
+        """
+        See: pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_batch_end()
+        """
         meta: List[dict]
         processed: pt.Tensor
         meta, processed = batch
@@ -85,6 +122,9 @@ class AutoencoderWriter(BasePredictionWriter):
 
     def write_on_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", predictions: Sequence[Any],
                            batch_indices: Optional[Sequence[Any]]) -> None:
+        """
+        See: pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_epoch_end()
+        """
         # Store dataset level metadata.
         root_meta = Path(self.__storage_path + '/metadata.pyc')
         self.__metadata['length'] = self.__count
