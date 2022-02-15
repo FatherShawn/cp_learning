@@ -23,13 +23,6 @@ def main(args: Namespace) -> None:
             learning_rate_min=args.l_rate_min,
              lr_max_epochs=args.l_rate_max_epoch
     )
-    if args.checkpoint_path is not None:
-        model = QuackDenseNet.load_from_checkpoint(
-            args.checkpoint_path,
-            learning_rate=args.l_rate,
-            learning_rate_min=args.l_rate_min,
-            lr_max_epochs=args.l_rate_max_epoch
-        )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
@@ -48,20 +41,20 @@ def main(args: Namespace) -> None:
         experiment_name=f'{args.exp_label}: {date_time}',
     )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_acc",
-        mode='max',
+        monitor="val_loss",
+        mode='min',
         save_top_k=3,
         save_last=True,
         every_n_train_steps=2000,
         auto_insert_metric_name=True,
-        filename='checkpoint_{epoch:02d}-step_{step}-{val_acc:02.2f}',
+        filename='checkpoint_{epoch:02d}-{step}-{val_loss:02.2f}',
         dirpath=checkpoint_storage,
     )
     early_stopping_callback = EarlyStopping(
-        monitor="val_acc",
-        mode='max',
+        monitor="val_loss",
+        mode='min',
         patience=10,
-        stopping_threshold=0.95,
+        stopping_threshold=0.2,
         check_finite=True,  # Stops training if the monitored metric becomes NaN or infinite.
     )
     trainer = Trainer.from_argparse_args(
@@ -72,7 +65,10 @@ def main(args: Namespace) -> None:
         weights_save_path=checkpoint_storage
     )
     print('Ready for training...')
-    trainer.fit(model, datamodule=data)
+    if args.checkpoint_path is not None:
+        trainer.fit(model, datamodule=data, ckpt_path=args.checkpoint_path)
+    else:
+        trainer.fit(model, datamodule=data)
 
 
 if __name__ == '__main__':
