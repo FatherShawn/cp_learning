@@ -10,12 +10,13 @@ import torchmetrics as tm
 
 class QuackDenseNet(pl.LightningModule):
     def __init__(self, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
-                 lr_max_epochs: int = -1, *args: Any, **kwargs: Any) -> None:
+                 lr_max_epochs: int = -1, freeze: bool = True, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # Load the pre-trained densenet
         pre_trained = models.densenet121(pretrained=True)
-        # Freeze the existing gradients.
-        pre_trained.requires_grad_(False)
+        if freeze:
+            # Freeze the existing gradients.
+            pre_trained.requires_grad_(False)
         # We want to replace the classifier.  New instances of models have
         # requires_grad = True by default.
         classifier_features_in = pre_trained.classifier.in_features

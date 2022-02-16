@@ -16,12 +16,14 @@ def main(args: Namespace) -> None:
     data = QuackImageDataModule(
         args.data_dir,
         batch_size=args.batch_size,
-        workers=args.num_workers
+        workers=args.num_workers,
+        simple_transforms=args.simple_transforms
     )
     model = QuackDenseNet(
             learning_rate=args.l_rate,
             learning_rate_min=args.l_rate_min,
-             lr_max_epochs=args.l_rate_max_epoch
+            lr_max_epochs=args.l_rate_max_epoch,
+            freeze=args.freeze
     )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
@@ -85,6 +87,8 @@ if __name__ == '__main__':
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)
     arg_parser.add_argument('--l_rate_max_epoch', type=int, default=-1)
+    arg_parser.add_argument('--freeze', action='store_true', default=False)
+    arg_parser.add_argument('--simple_transforms', action='store_true', default=False)
 
     # add trainer arguments (gpus=x, precision=...)
     arg_parser = Trainer.add_argparse_args(arg_parser)

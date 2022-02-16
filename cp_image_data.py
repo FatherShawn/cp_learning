@@ -9,21 +9,21 @@ from cp_image_dataset import QuackImageDataset
 
 class QuackImageTransformer:
 
-    def __init__(self, step_type: str) -> None:
+    def __init__(self, strategy: str) -> None:
         super().__init__()
-        valid_types = {'train', 'val', 'predict'}
-        if step_type not in valid_types:
-            raise ValueError('Improper transform step_type.')
-        self.__type = step_type
+        valid_types = {'randomize', 'simple'}
+        if strategy not in valid_types:
+            raise ValueError('Improper transform strategy.')
+        self.__type = strategy
         # For normalize configuration, see https://pytorch.org/hub/pytorch_vision_densenet/
-        if self.__type == 'train':
+        if self.__type == 'randomize':
             self.__transforms = transforms.Compose([
                 transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.RandomResizedCrop(size=224, interpolation=transforms.InterpolationMode.NEAREST),
                 transforms.RandomHorizontalFlip(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
-        if self.__type == 'val' or self.__type == 'predict':
+        if self.__type == 'simple':
             self.__transforms = transforms.Compose([
                 transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -88,9 +88,10 @@ class QuackImageTransformer:
 
 
 class QuackImageDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str, batch_size: int = 64, workers: int = 0):
+    def __init__(self, data_dir: str, batch_size: int = 64, workers: int = 0, simple_transforms: bool = True):
         self.__batch_size = batch_size
         self.__workers = workers
+        self.__simple_transforms = simple_transforms
         dataset = QuackImageDataset(data_dir)
         self.__predict_data = QuackImageDataset(data_dir)
         print(f'Source dataset ready with {len(dataset)} items.')
@@ -107,7 +108,8 @@ class QuackImageDataModule(pl.LightningDataModule):
         print(f'Validation dataset randomly split with {len(self.__val_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        train_collate = QuackImageTransformer(step_type='train')
+        transform_strategy = 'simple' if self.__simple_transforms else 'randomize'
+        train_collate = QuackImageTransformer(strategy=transform_strategy)
         return DataLoader(
             self.__train_data,
             batch_size=self.__batch_size,
@@ -118,7 +120,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        test_collate = QuackImageTransformer(step_type='val')
+        test_collate = QuackImageTransformer(strategy='simple')
         return DataLoader(
             self.__test_data,
             batch_size=self.__batch_size,
@@ -128,7 +130,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        val_collate = QuackImageTransformer(step_type='val')
+        val_collate = QuackImageTransformer(strategy='simple')
         return DataLoader(
             self.__val_data,
             batch_size=self.__batch_size,
@@ -138,7 +140,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
-        predict_collate = QuackImageTransformer(step_type='predict')
+        predict_collate = QuackImageTransformer(strategy='simple')
         return DataLoader(
             self.__predict_data,
             batch_size=self.__batch_size,
