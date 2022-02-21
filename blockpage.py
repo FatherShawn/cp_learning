@@ -73,10 +73,13 @@ class BlockpageMatcher:
     -------
     Tuple[Optional[bool], Optional[str]]
       (match_outcome, match_fingerprint)
+
       match_outcome is
-        True if page matches a blockpage signature.
-        False if page matches a false positive signature.
-        None otherwise.
+
+        - *True* if page matches a blockpage signature.
+        - *False* if page matches a false positive signature.
+        - *None* otherwise.
+
       match_fingerprint is a signature for a blockpage/fp like 'a_prod_cisco'
     """
     for fingerprint, pattern in self.false_positives.items():

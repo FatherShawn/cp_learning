@@ -118,7 +118,8 @@ class QuackDenseNet(pl.LightningModule):
         Returns
         -------
         dict
-            Format expected by the parent class. Has a three keys:
+            Format expected by the parent class. Has three keys:
+
             loss
                 The loss returned by `_common_step`.
             expected
@@ -143,7 +144,8 @@ class QuackDenseNet(pl.LightningModule):
         Returns
         -------
         dict
-            Format expected by the parent class. Has a three keys:
+            Format expected by the parent class. Has three keys:
+
             loss
                 The loss returned by `_common_step`.
             expected
@@ -168,7 +170,8 @@ class QuackDenseNet(pl.LightningModule):
         Returns
         -------
         dict
-            Format expected by the parent class. Has a three keys:
+            Format expected by the parent class. Has three keys:
+
             loss
                 The loss returned by `_common_step`.
             expected
