@@ -1,4 +1,8 @@
+"""
+A controller script for flattening Censored Planet data.
+"""
 from cp_flatten import CensoredPlanetFlatten, TokenizedQuackData
+from autoencoder import item_path as filepath
 from datetime import datetime
 from argparse import ArgumentParser
 import numpy as np
@@ -6,27 +10,25 @@ from pathlib import Path
 import pickle
 
 
-class FreqIter:
-
-    def __init__(self, source: dict) -> None:
-        self.__frequency_dict = source
-
-    def __iter__(self) -> int:
-        for key, value in self.__frequency_dict.items():
-            for instance in range(value):
-                yield key
-
-
-def filepath(index: int, dir_only=False) -> str:
-    rank_five = index // 100000
-    remainder = index - (rank_five * 100000)
-    rank_three_four = remainder // 1000
-    if dir_only:
-        return f'/{rank_five}/{rank_three_four}'
-    return f'/{rank_five}/{rank_three_four}/{index}.pyc'
-
-
 def verify_returned_item(item: TokenizedQuackData) -> None:
+    """
+    Utility function to check the structure of a TokenizedQuackData item.
+
+    Parameters
+    ----------
+    item: TokenizedQuackData
+        The item to check
+
+    Raises
+    ------
+    AssertionError
+        Thrown if any test of the structure fails.
+
+    Returns
+    -------
+    void
+
+    """
     meta = item['metadata']
     assert (isinstance(item, dict)), 'Item from the dataset is not a dictionary.'
     assert ('metadata' in item), 'Key "metadata" not found in item from the dataset.'
@@ -41,8 +43,18 @@ def verify_returned_item(item: TokenizedQuackData) -> None:
 
 def main() -> None:
     """
-    Create a list of file paths or urls to process.  The webdataset library expects a list,
-    so we place only one item in the list.
+    Flattens the data in a single .tar file and adds it to the dataset under construction.
+
+    **Required** arguments are:
+
+         --source_path
+            *str*   The path to the .tar file.  May be local or a url. Passed to `CensoredPlanetFlatten`.
+         --storage_path:
+            *str* The top directory of the data storage tree.
+         --log_path
+            *str* default=0 The path to a log file.
+         --vocab_path
+            *str* default=0 The path to a .pyc file.  Passed to `CensoredPlanetFlatten`.
     """
     # Add args to make a more flexible cli tool.
     arg_parser = ArgumentParser()

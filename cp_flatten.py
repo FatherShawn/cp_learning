@@ -1,3 +1,6 @@
+"""
+CensoredPlanetFlatten and helper classes to flatten raw Censored Planet data.
+"""
 import json
 import tarfile
 import re
@@ -72,6 +75,9 @@ class Row(TypedDict):
 
 
 class TokenizedQuackData(TypedDict):
+    """
+    A data structure to hold the flattened data.
+    """
     metadata: dict
     static_size: np.ndarray
     variable_text: np.ndarray
@@ -83,9 +89,10 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
     my intention here is to take in the Censored Planet Quack data and pre-preprocess it into Pytorch Tensors.
 
     The following are adapted from https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/flatten.py
-    - process_hyperquack_v1
-    - process_hyperquack_v2
-    - extract_domain_from_sent_field
+
+    - `process_hyperquack_v1`
+    - `process_hyperquack_v2`
+    - `extract_domain_from_sent_field`
 
     Parameters
     ----------
@@ -99,14 +106,24 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         The XLMR pretrained tokenizer.
     """
 
-    def __getitem__(self, index) -> T_co:
-        """
-        Required by the parent of IterableDataset but not useful in this context, and not implemented by any of the
-        Webdataset implementations of IterableDataset.
-        """
-        pass
 
     def __init__(self, urls: Union[str, List[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False) -> None:
+        """
+
+        Parameters
+        ----------
+        urls: Union[str, List[str]]
+            Path or paths to pass to webdataset.dataset.ShardList. Points to Censored Planet .tar data files.
+        vocab_path: str
+            Path to a .pyc file which holds a dictionary that maps an index sequence with tokens used from
+            fairseq.models.roberta.model_xlmr.XLMRModel when flattening data.
+        compare: bool
+            Should data be compared with Censored Planet blockpage signatures?
+        labeled: bool
+            Should only data successfully precessed by blockpage matcher be returned?
+        anomalies: bool
+            Should only data marked by Censored Planet as an anomaly be processed?
+        """
         super().__init__()
 
         assert (
@@ -129,7 +146,22 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__vocab_next = len(self.__vocab)
 
 
+    def __getitem__(self, index) -> T_co:
+        """
+        Required by the parent of IterableDataset but not useful in this context, and not implemented by any of the
+        Webdataset implementations of IterableDataset.
+        """
+        pass
+
     def __iter__(self) -> Iterator[TokenizedQuackData]:
+        """
+        Iterates the data in the .tar files.
+
+        Returns
+        -------
+        TokenizedQuackData
+            A dictionary (TypedDict) containing flattened data for a single item.
+        """
         for quack_file in url_opener(self.__shards):
             for filestream in self.__quack_file_expander(quack_file):
                 file_name, connection = filestream
@@ -249,8 +281,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V1 format.
 
-        https://censoredplanet.readthedocs.io/en/latest/hyperquackv1.html
-
         Parameters
         ----------
         scan: dict
@@ -259,6 +289,10 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         Yields
         -------
         TokenizedQuackData
+
+        References
+        ----------
+        https://censoredplanet.readthedocs.io/en/latest/hyperquackv1.html
         """
         for index, result in enumerate(scan.get('Results', [])):
             domain = self.__extract_domain_from_sent_field(result['Sent'])
@@ -328,8 +362,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V2 format.
 
-        https://censoredplanet.readthedocs.io/en/latest/hyperquackv2.html
-
         Parameters
         ----------
         scan: dict
@@ -338,6 +370,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         Yields
         -------
         TokenizedQuackData
+
+        References
+        ----------
+        https://censoredplanet.readthedocs.io/en/latest/hyperquackv2.html
+
         """
         controls_failed = False
         if 'controls_failed' in scan:
@@ -397,20 +434,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             )
             yield self.__process_row(row)
 
-    def __process_satellite(self, filename: str, scan: Dict) -> TokenizedQuackData:
-        """
-
-        Parameters
-        ----------
-        filename: str
-        scan: dict
-
-        Returns
-        -------
-        TokenizedQuackData
-        """
-        pass
-
     def __process_row(self, row: Row) -> TokenizedQuackData:
         """
         Transforms flattened data in a Row into a torch.Tensor with metadata.
@@ -423,8 +446,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         -------
         TokenizedQuackData
         """
-        # See if we can look up a country from the ip.
-
         if not len(row['location']):
             try:
                 lookup = self.__ip2geo.country(row['ip'])
@@ -444,7 +465,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         # Row keys with static length data.
         static_keys = ('success', 'anomaly', 'controls_failed', 'stateful_block', 'start_time', 'end_time', 'received_tls_version', 'received_tls_cipher_suite', 'received_tls_cert')
         # Row keys with variable length (text) data.
-        ##> Skipping 'received_tls_cert' for now.
+        # #> Skipping 'received_tls_cert' for now.
         text_keys = ('sent', 'received_status', 'received_headers', 'received_body')
         static_dimension = []
         # First split the ip and cast to int.
@@ -520,6 +541,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
     def __parse_received_data(self, received: Union[str, Dict[str, Any]]) -> Dict:
         """
+        Processes data found in the "received" key of a row.
 
         Parameters
         ----------
@@ -529,7 +551,6 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         Returns
         -------
         dict
-
         """
         data = {
             'received_status': '',
@@ -569,6 +590,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
     def __blockpage_match(self, body) -> int:
         """
+        Uses the regular expression matcher provide by Censored Planet.
 
         Parameters
         ----------

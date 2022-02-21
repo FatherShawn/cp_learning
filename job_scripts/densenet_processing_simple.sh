@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name="autoEncoderTraining"
+#SBATCH --job-name="simpleDensenet"
 #SBATCH --partition production
 #SBATCH --nodes=8
 #SBATCH --ntasks=64
 #SBATCH --tasks-per-node=8
 #SBATCH --mem=44Gb
 
-# Auto re-submit
-#SBATCH --signal=SIGUSR1@90
 
 # change to the working directory
 cd $SLURM_WORKDIR
@@ -38,7 +36,7 @@ fi
 # __doc_head_address_end__
 
 # __doc_head_ray_start__
-port=6379
+port=37056
 ip_head=$head_node_ip:$port
 export ip_head
 echo "IP Head: $ip_head"
@@ -70,20 +68,24 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-#\
-#--checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/epoch-40-step-178853.ckpt
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder epoch 42 continuing" \
---data_dir $(pwd)/pickled \
+# change to the working directory
+cd $SLURM_WORKDIR
+
+echo ">>>> Begin simpleDensenet"
+
+# \
+#--checkpoint_path $(pwd)/auto_checkpoints/densenet/last.ckpt
+
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet simple fine-tune" \
+--data_dir $(pwd)/as_images \
 --accelerator cpu \
---batch_size 2 \
---ray_nodes 8 \
---num_workers 6 \
---embed_size 96 \
---hidden_size 256 \
---l_rate 0.0033 \
+--batch_size 8 \
+--l_rate 0.0003 \
 --l_rate_min 0.0001 \
 --l_rate_max_epoch 60 \
---limit_train_batches 0.1 \
---checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/last-41.ckpt \
---storage_path $(pwd)/auto_checkpoints/autoencoder
+--ray_nodes 8 \
+--num_workers 6 \
+--storage_path $(pwd)/auto_checkpoints/densenet-simple-unfrozen \
+--limit_train_batches 0.2 \
+--simple_transforms

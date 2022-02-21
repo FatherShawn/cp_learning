@@ -1,3 +1,7 @@
+"""
+Extends `pytorch_lightning.core.datamodule.LightningDataModule` and wraps QuackIterableDataset for use by
+`pytorch_lightning.trainer.trainer.Trainer`
+"""
 from typing import Tuple
 import torch as pt
 import pytorch_lightning as pl
@@ -58,7 +62,20 @@ def pad_right_with_meta(batch: List[dict]) -> Tuple[List[dict], pt.Tensor]:
     return meta, pt.stack(batch_padded)
 
 
-def concatenate_data(item: dict) ->np.ndarray:
+def concatenate_data(item: dict) -> np.ndarray:
+    """
+    Concatenates the static and text data into a single numpy array.
+
+    Parameters
+    ----------
+    item: dict
+        A TypedDict `cp_flatten.TokenizedQuackData`
+
+    Returns
+    -------
+    np.ndarray
+        The concatenated data.
+    """
     static_source = item['static_size']  # type: np.ndarray
     static_size = []
     variable_text = item['variable_text']  # type: np.ndarray
@@ -83,6 +100,30 @@ def concatenate_data(item: dict) ->np.ndarray:
 class QuackTokenizedDataModule(pl.LightningDataModule):
     def __init__(self, data_dir: str, batch_size: int = 64, workers: int = 0, train_transforms=None,
                  val_transforms=None, test_transforms=None, dims=None):
+        """
+        Constructs QuackTokenizedDataModule.
+
+        Parameters
+        ----------
+        data_dir: str
+            The path to top dir of the `QuackIterableDataset`.
+        batch_size: int
+            The batch size to pass to the `torch.utils.data.dataloader.DataLoader`
+        workers: int
+            The number of workers to pass to the `torch.utils.data.dataloader.DataLoader`
+        train_transforms
+            deprecated: DataModule property `train_transforms` was deprecated in
+            pytorch_lightning.core.datamodule.LightningDataModule v1.5 and will be removed in v1.7.
+        val_transforms
+            deprecated: DataModule property `val_transforms` was deprecated in
+            pytorch_lightning.core.datamodule.LightningDataModule v1.5 and will be removed in v1.7.
+        test_transforms
+            deprecated: DataModule property `test_transforms` was deprecated in
+            pytorch_lightning.core.datamodule.LightningDataModule v1.5 and will be removed in v1.7.
+        dims
+            deprecated: DataModule property `dims` was deprecated in
+            pytorch_lightning.core.datamodule.LightningDataModule v1.5 and will be removed in v1.7.
+        """
         super().__init__(train_transforms, val_transforms, test_transforms, dims)
         self.__batch_size = batch_size
         self.__workers = workers
@@ -102,6 +143,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         print(f'Validation dataset randomly split with {len(self.__val_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        Constructs and returns the training dataloader using collate function `pad_right`.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         return DataLoader(
             self.__train_data,
             batch_size=self.__batch_size,
@@ -112,6 +160,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the testing dataloader using collate function `pad_right`.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         return DataLoader(
             self.__test_data,
             batch_size=self.__batch_size,
@@ -121,6 +176,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the validation dataloader using collate function `pad_right`.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         return DataLoader(
             self.__val_data,
             batch_size=self.__batch_size,
@@ -130,6 +192,13 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the inference dataloader using collate function `pad_right_with_meta`.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         return DataLoader(
             self.__predict_data,
             batch_size=self.__batch_size,
@@ -138,5 +207,12 @@ class QuackTokenizedDataModule(pl.LightningDataModule):
             persistent_workers=True
         )
 
-    def get_width(self):
+    def get_width(self) -> int:
+        """
+        Returns `data_width()` from the cp_dataset.QuackIterableDataset loaded in this data module.
+
+        Returns
+        -------
+        int
+        """
         return self.__width

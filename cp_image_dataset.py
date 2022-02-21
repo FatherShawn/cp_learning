@@ -1,3 +1,6 @@
+"""
+Defines a class and data structures for flattened quack data stored as images and pixel tensors.
+"""
 import numpy as np
 import torch
 from pathlib import Path
@@ -7,6 +10,9 @@ from typing import Iterator, Union, TypedDict
 
 
 class QuackImageData(TypedDict):
+    """
+    Flattened quack data and associated metadata.
+    """
     metadata: dict
     pixels: np.ndarray
 
@@ -14,29 +20,48 @@ class QuackImageData(TypedDict):
 class QuackImageDataset(Dataset):
     """
     Iterates or selectively retrieves items from a collection of python pickle files which contain QuackImageData
-    length: The number of responses in the file.
-    censored: The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+
+    Metadata stored in metadata.pyc:
+
+    length
+        The number of responses in the file.
+    censored
+        The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
-    undetermined: The number of unlabeled responses.
-    uncensored The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+    undetermined
+        The number of unlabeled responses.
+    uncensored
+        The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
 
     Each response is stored in a single .pyc file, named with the index number of the response, zero based.
-    Metadata for the response is stored in the metadata key of the TokenizedQuackData typed dictionary:
-    domain: The domain under test
-    ip: The IPv4 address for this test
-    location: The country returned by MMDB for the IP address
-    timestamp: A Unix timestamp for the time of the test
-    censored: 1 if censored, -1 if uncensored, 0 as default (undetermined)
+    Metadata for the response is stored in the `metadata` key of the QuackImageData typed dictionary:
+
+    domain
+        The domain under test
+    ip
+        The IPv4 address for this test
+    location
+        The country returned by MMDB for the IP address
+    timestamp
+        A Unix timestamp for the time of the test
+    censored
+        1 if censored, -1 if uncensored, 0 as default (undetermined)
 
     Each QuackImageData stores one numpy arrays:
-    'pixels': A (224, 224) numpy array of pixel data
-        See cp_flatten.CensoredPlanetFlatten.__process_row
-        See cp_image_reprocessor.py
+
+    pixels
+        A (224, 224) numpy array of pixel data
+
+    See Also
+    --------
+    `cp_flatten.CensoredPlanetFlatten.__process_row`
+    cp_image_reprocessor.py
     """
 
     def __init__(self, path: str) -> None:
         """
+        Constructs QuackImageDataset.
 
         Parameters
         ----------
@@ -66,7 +91,7 @@ class QuackImageDataset(Dataset):
 
         Returns
         -------
-
+        QuackImageData
         """
         for index in range(self.__length):
             file_path = self.__locate_item(index)
@@ -75,6 +100,15 @@ class QuackImageDataset(Dataset):
     def __getitem__(self, index) -> QuackImageData:
         """
         Implements a required method to access a single data point by index.
+
+        Parameters
+        ----------
+        index: int
+          The index of the data item.
+
+        Returns
+        -------
+        QuackImageData
         """
         file_path = self.__locate_item(index)
         return self.__load_item(file_path)
@@ -123,13 +157,41 @@ class QuackImageDataset(Dataset):
         return Path(f'{self.__path}/{stem}')
 
     def censored(self) -> int:
+        """
+        Getter for the value of self.__censored.
+
+        Returns
+        -------
+        int
+        """
         return self.__censored
 
     def undetermined(self) -> int:
+        """
+        Getter for the value of self.__undetermined.
+
+        Returns
+        -------
+        int
+        """
         return self.__undetermined
 
     def uncensored(self) -> int:
+        """
+        Getter for the value of self.__uncensored.
+
+        Returns
+        -------
+        int
+        """
         return self.__uncensored
 
     def data_width(self) -> int:
+        """
+        Getter for the value of self.__max_width.
+
+        Returns
+        -------
+        int
+        """
         return self.__max_width
