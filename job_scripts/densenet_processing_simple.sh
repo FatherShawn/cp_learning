@@ -77,7 +77,7 @@ echo ">>>> Begin simpleDensenet"
 # \
 #--checkpoint_path $(pwd)/auto_checkpoints/densenet/last.ckpt
 
-python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet simple fine-tune" \
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet full fine-tune pixels scaled" \
 --data_dir $(pwd)/as_images \
 --accelerator cpu \
 --batch_size 8 \
@@ -86,6 +86,6 @@ python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet simple fine-tun
 --l_rate_max_epoch 60 \
 --ray_nodes 8 \
 --num_workers 6 \
---storage_path $(pwd)/auto_checkpoints/densenet-simple-unfrozen \
+--storage_path $(pwd)/auto_checkpoints/densenet-pixels-scaled-unfrozen \
 --limit_train_batches 0.2 \
 --simple_transforms

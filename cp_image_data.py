@@ -22,14 +22,16 @@ class QuackImageTransformer:
         # For normalize configuration, see https://pytorch.org/hub/pytorch_vision_densenet/
         if self.__type == 'randomize':
             self.__transforms = transforms.Compose([
-                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
                 transforms.RandomResizedCrop(size=224, interpolation=transforms.InterpolationMode.NEAREST),
                 transforms.RandomHorizontalFlip(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         if self.__type == 'simple':
             self.__transforms = transforms.Compose([
-                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if len(x.size()) == 2 else x),
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
 
@@ -58,8 +60,7 @@ class QuackImageTransformer:
         data = []
         labels = []
         for item in batch:
-            image = pt.from_numpy(item['pixels'])
-            image = self.__transforms(image.to(pt.float))
+            image = self.__transforms(item['pixels'])
             data.append(image)
             censored = pt.tensor([0]).to(pt.float)
             if item['metadata']['censored'] == 1:
@@ -83,8 +84,7 @@ class QuackImageTransformer:
         data = []
         meta = []
         for item in batch:
-            image = pt.from_numpy(item['pixels'])
-            image = self.__transforms(image.to(pt.float))
+            image = self.__transforms(item['pixels'])
             data.append(image)
             meta.append(item['metadata'])
         return pt.stack(data), meta
