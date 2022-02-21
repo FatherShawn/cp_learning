@@ -1,3 +1,6 @@
+"""
+The densenet model with classes composed into the densenet class.
+"""
 from pytorch_lightning.utilities.types import EPOCH_OUTPUT, STEP_OUTPUT
 from pytorch_lightning.utilities.distributed import rank_zero_info
 from typing import Any, List, Optional, TypedDict, Tuple
@@ -9,8 +12,33 @@ import torchmetrics as tm
 
 
 class QuackDenseNet(pl.LightningModule):
+    """
+    A modification of the Pytorch Densenet 121 pretrained model.
+
+    References
+    ----------
+    https://pytorch.org/hub/pytorch_vision_densenet/
+    """
     def __init__(self, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
                  lr_max_epochs: int = -1, freeze: bool = True, *args: Any, **kwargs: Any) -> None:
+        """
+        Constructor for QuackDenseNet.
+
+        Parameters
+        ----------
+        learning_rate: float
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        learning_rate_min: float
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        lr_max_epochs: int
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        freeze: bool
+            Should the image analyzing layers of the pre-trained Densenet be frozen?
+        args: Any
+            Passed to the parent constructor.
+        kwargs: Any
+            Passed to the parent constructor.
+        """
         super().__init__(*args, **kwargs)
         # Load the pre-trained densenet
         pre_trained = models.densenet121(pretrained=True)
@@ -77,48 +105,222 @@ class QuackDenseNet(pl.LightningModule):
         return loss, labels.to(pt.int8), output_labels.to(pt.int8)
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        """
+        Calls _common_step for step 'train'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        dict
+            Format expected by the parent class. Has a three keys:
+            loss
+                The loss returned by `_common_step`.
+            expected
+                The labels from the batch returned by `_common_step`.
+            predicted
+                The predicted labels from the batch returned by `_common_step`.
+        """
         loss, expected, predicted = self._common_step(x, batch_index, 'train')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
     def validation_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        """
+        Calls _common_step for step 'val'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        dict
+            Format expected by the parent class. Has a three keys:
+            loss
+                The loss returned by `_common_step`.
+            expected
+                The labels from the batch returned by `_common_step`.
+            predicted
+                The predicted labels from the batch returned by `_common_step`.
+        """
         loss, expected, predicted = self._common_step(x, batch_index, 'val')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
     def test_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        """
+        Calls _common_step for step 'test'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        dict
+            Format expected by the parent class. Has a three keys:
+            loss
+                The loss returned by `_common_step`.
+            expected
+                The labels from the batch returned by `_common_step`.
+            predicted
+                The predicted labels from the batch returned by `_common_step`.
+        """
         loss, expected, predicted = self._common_step(x, batch_index, 'test')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
+        """
+        Calls _common_step for step 'predict'.
+
+        Parameters
+        ----------
+        batch: pt. Tuple[dict, pt.Tensor]
+            An tuple of a metadata dictionary and the associated input data
+        batch_idx: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+        dataloader_idx: int
+            Index of the current dataloader.   Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        Tuple[dict, pt.Tensor]
+            An tuple of the batch metadata dictionary and the associated output data
+        """
         inputs, meta = batch
-        return self.forward(inputs), meta
+        return meta, self.forward(inputs)
 
     def training_step_end(self, outputs: dict, *args, **kwargs):
+        """
+        When using distributed backends, only a portion of the batch is inside the `training_step`.
+        We calculate metrics here with the entire batch.
+
+        Parameters
+        ----------
+        outputs: dict
+            The return values from `training_step` for each batch part.
+        args: Any
+            Matching to the parent constructor.
+        kwargs: Any
+            Matching to the parent constructor.
+
+        Returns
+        -------
+        void
+        """
         self.__train_acc(outputs['predicted'], outputs['expected'])
         self.log('train_acc', self.__train_acc)
         self.__train_f1(outputs['predicted'], outputs['expected'])
         self.log('train_f1', self.__train_f1)
 
     def validation_step_end(self, outputs: dict, *args, **kwargs):
+        """
+        When using distributed backends, only a portion of the batch is inside the `validation_step`.
+         We calculate metrics here with the entire batch.
+
+        Parameters
+        ----------
+        outputs: dict
+            The return values from `training_step` for each batch part.
+        args: Any
+            Matching to the parent constructor.
+        kwargs: Any
+            Matching to the parent constructor.
+
+        Returns
+        -------
+        void
+        """
         self.__val_acc.update(outputs['predicted'], outputs['expected'])
         self.__val_f1.update(outputs['predicted'], outputs['expected'])
 
     def test_step_end(self, outputs: dict, *args, **kwargs):
+        """
+        When using distributed backends, only a portion of the batch is inside the `test_step`.
+         We calculate metrics here with the entire batch.
+
+        Parameters
+        ----------
+        outputs: dict
+            The return values from `training_step` for each batch part.
+        args: Any
+            Matching to the parent constructor.
+        kwargs: Any
+            Matching to the parent constructor.
+
+        Returns
+        -------
+        void
+        """
         self.__test_acc.update(outputs['predicted'], outputs['expected'])
         self.__test_f1.update(outputs['predicted'], outputs['expected'])
 
     def test_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
+        """
+        Called at the end of a test epoch with the output of all test steps.
+
+        Now that all the test steps are complete, we compute the metrics.
+
+        Parameters
+        ----------
+        outputs: None
+            No outputs are passed on from `test_step_end`.
+
+        Returns
+        -------
+        void
+        """
         self.__test_acc.compute()
         self.__test_f1.compute()
         self.log('test_acc', self.__test_acc)
         self.log('test_f1', self.__test_f1)
 
     def validation_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
+        """
+        Called at the end of a validation epoch with the output of all test steps.
+
+        Now that all the validation steps are complete, we compute the metrics.
+
+        Parameters
+        ----------
+        outputs: None
+            No outputs are passed on from `test_step_end`.
+
+        Returns
+        -------
+        void
+        """
         self.__val_acc.compute()
         self.__val_f1.compute()
         self.log('val_acc', self.__val_acc)
         self.log('val_f1', self.__val_f1)
 
     def configure_optimizers(self):
+        """
+        Configures the optimizer and learning rate scheduler objects.
+
+        Returns
+        -------
+        dict
+            A dictionary with keys:
+
+            - optimizer: pt.optim.AdamW
+            - lr_scheduler: pt.optim.lr_scheduler.CosineAnnealingLR
+
+        See Also
+        --------
+        pytorch_lightning.core.lightning.LightningModule.configure_optimizers
+        """
         parameters = list(self.parameters())
         trainable_parameters = list(filter(lambda p: p.requires_grad, parameters))
         rank_zero_info(

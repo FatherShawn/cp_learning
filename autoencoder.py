@@ -1,5 +1,7 @@
-from pytorch_lightning.utilities.types import STEP_OUTPUT
-from typing import Any, List, Optional, Sequence, Tuple, Dict
+"""
+The autoencoder class along with classes that compose the autoencoder class and helper functions.
+"""
+from typing import Any, List, Optional, Sequence, Tuple, Dict, Union
 from pathlib import Path
 import pickle
 import torch as pt
@@ -42,6 +44,7 @@ def item_path(index: int, suffix: str = 'png', dir_only: bool = False, is_collec
         return stem
     return stem + f'/{index}.{suffix}'
 
+
 class AutoencoderWriter(BasePredictionWriter):
     """
     Extends prediction writer to store encoded Quack data.
@@ -64,22 +67,39 @@ class AutoencoderWriter(BasePredictionWriter):
         """
         super().__init__(write_interval)
         self.__storage_path = storage_path
-        self.__root_meta = Path(storage_path + '/metadata.pyc')
         self.__filtered = filtered and not evaluate
         self.__evaluate = evaluate
-        self.__count = 0
-        self.__metadata = {
-            'censored': 0,
-            'undetermined': 0,
-            'uncensored': 0,
-            'length': 0
-        }
+        self.__root_meta = Path(storage_path + '/metadata.pyc')
+        try:
+            with self.__root_meta.open(mode='rb') as retrieved_dict:
+                metadata = pickle.load(retrieved_dict)
+                self.__count = metadata['length']
+        except OSError:
+            self.__count = 0
+            self.__metadata = {
+                'censored': 0,
+                'undetermined': 0,
+                'uncensored': 0,
+                'length': 0
+            }
 
     def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
                            batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
                            dataloader_idx: int) -> None:
         """
-        See: pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_batch_end()
+        Logic to write the results of a single batch to files.
+
+        Parameters
+        ----------
+        Parameter signature defined in the parent class.
+
+        Returns
+        ----------
+        void
+
+        See Also
+        ----------
+        pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_batch_end
         """
         meta: List[dict]
         processed: pt.Tensor
@@ -123,7 +143,19 @@ class AutoencoderWriter(BasePredictionWriter):
     def write_on_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", predictions: Sequence[Any],
                            batch_indices: Optional[Sequence[Any]]) -> None:
         """
-        See: pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_epoch_end()
+        Logic to write the metadata for the data processed to file.
+
+        Parameters
+        ----------
+        Parameter signature defined in the parent class.
+
+        Returns
+        ----------
+        void
+
+        See Also
+        ----------
+        pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_epoch_end
         """
         # Store dataset level metadata.
         root_meta = Path(self.__storage_path + '/metadata.pyc')
@@ -135,11 +167,16 @@ class AutoencoderWriter(BasePredictionWriter):
 class AttentionScore(nn.Module):
     """
     Uses the dot-product to calculate the attention scores.
-    See {Raff, Inside Deep Learning: Math, Algorithms, Models} Ch. 10
+
+    References
+    ----------
+    Edward Raff. 2021. Inside Deep Learning: Math, Algorithms, Models. Manning
+    Publications Co., Shelter Island, New York
     """
 
     def __init__(self, dim: int) -> None:
         """
+        Constructs AttentionScore.
 
         Parameters
         ----------
@@ -154,6 +191,8 @@ class AttentionScore(nn.Module):
         Computes the dot-product score:
 
         :math`score(h_t, c) = \frac{h^T_t \cdot c}{\sqrt{H}}`
+        with values of h taken from the states parameter, c from the context paramter and H is the dim parameter
+        passed at construction.
 
         Parameters
         ----------
@@ -175,23 +214,34 @@ class AttentionScore(nn.Module):
 class AttentionModule(nn.Module):
     """
     Applies attention to the hidden states.
-    Adapted from {Raff, Inside Deep Learning: Math, Algorithms, Models} Ch. 10
+
+    References
+    ----------
+    Edward Raff. 2021. Inside Deep Learning: Math, Algorithms, Models. Manning
+    Publications Co., Shelter Island, New York
     """
 
     def __init__(self):
         super().__init__()
 
-    def forward(self, states: pt.Tensor, attention_scores, mask=None):
+    def forward(self, states: pt.Tensor, attention_scores, mask: Union[None, pt.Tensor] = None):
         """
+        Processes the attention inputs.
+
+        Parameters
+        ----------
         states: pt.Tensor
-            (B, T, H) shape giving the T different possible inputs
-        attention_scores: (B, T, 1) score for each item at each context
-        mask: None if all items are present. Else a boolean tensor of shape
+            (B, T, H) shape giving the T different possible inputs attention_scores:
+            (B, T, 1) score for each item at each context
+        mask: Union[None, pt.Tensor]
+            None if all items are present. Else a boolean tensor of shape
             (B, T), with `True` indicating which items are present / valid.
 
-        returns: a tuple with two tensors. The first tensor is the final context
-        from applying the attention to the states (B, H) shape. The second tensor
-        is the weights for each state with shape (B, T, 1).
+        Returns
+        --------
+        Tuple[pt.Tensor, pt.Tensor]
+            A tuple with two tensors. The first tensor is the final context from applying the attention to the
+            states (B, H) shape. The second tensor is the weights for each state with shape (B, T, 1).
         """
 
         if mask is not None:
@@ -206,11 +256,42 @@ class AttentionModule(nn.Module):
 
 class QuackAutoEncoder(pl.LightningModule):
     """
-    A Sequence-to-Sequence based autoencoder adapted from {Raff, Inside Deep Learning: Math, Algorithms, Models} Ch. 11.
+    A Sequence-to-Sequence based autoencoder
+
+    References
+    ----------
+    Edward Raff. 2021. Inside Deep Learning: Math, Algorithms, Models. Manning
+    Publications Co., Shelter Island, New York
     """
     def __init__(self, num_embeddings: int, embed_size: int, hidden_size: int, layers: int = 1,
                  max_decode_length: int = None, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
                  lr_max_epochs: int = -1, *args: Any, **kwargs: Any) -> None:
+        """
+        Constructor for QuackAutoEncoder.
+
+        Parameters
+        ----------
+        num_embeddings: int
+            Hyperparameter for nn.Embedding
+        embed_size: int
+            Hyperparameter for nn.Embedding and nn.GRU
+        hidden_size: int
+            Hyperparameter for nn.GRU
+        layers: int
+            Hyperparameter for nn.GRU
+        max_decode_length: int
+            Hyperparameter used to limit the decoder module.
+        learning_rate: float
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        learning_rate_min: float
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        lr_max_epochs: int
+            Hyperparameter passed to pt.optim.lr_scheduler.CosineAnnealingLR
+        args: Any
+            Passed to the parent constructor.
+        kwargs Any
+            Passed to the parent constructor.
+        """
         super().__init__(*args, **kwargs)
         self.__hidden_size = hidden_size
         self.__max_decode_length = max_decode_length
@@ -247,6 +328,7 @@ class QuackAutoEncoder(pl.LightningModule):
 
     def mask_input(self, padded_input: pt.Tensor) -> pt.Tensor:
         """
+        Creates a mask tensor to filter out padding.
 
         Parameters
         ----------
@@ -256,7 +338,7 @@ class QuackAutoEncoder(pl.LightningModule):
         Returns
         -------
         pt.Tensor
-            A boolean tensor (B, T).  True indicates the value at that time is usable, not fill.
+            A boolean tensor (B, T).  True indicates the value at that time is usable, not padding.
 
         """
         with pt.no_grad():
@@ -277,7 +359,7 @@ class QuackAutoEncoder(pl.LightningModule):
         Returns
         -------
         float
-          The aggregated loss.
+          The aggregated CrossEntropyLoss.
 
         """
         cross_entropy = nn.CrossEntropyLoss(ignore_index=QuackConstants.XLMR_PAD.value)
@@ -292,7 +374,7 @@ class QuackAutoEncoder(pl.LightningModule):
         """
         We put just the encoding process in forward.  The twin decoding process will only be found in
         the common step used in training and testing. This prepares the model for its intended use as
-        as encoding and condensing latent features.
+        encoding and condensing latent features.
 
         Parameters
         ----------
@@ -375,20 +457,97 @@ class QuackAutoEncoder(pl.LightningModule):
         return loss
 
     def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
+        """
+        Calls _common_step for step 'train'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        dict
+            Format expected by the parent class. Has a single key, 'loss' with the return value of _common_step.
+        """
         return {'loss': self._common_step(x, batch_index, 'train')}
 
     def validation_step(self, x: pt.Tensor, batch_index: int) -> float:
+        """
+        Calls _common_step for step 'val'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        float
+            Format expected by the parent class. The loss returned by _common_step.
+        """
         return self._common_step(x, batch_index, 'val')
 
     def test_step(self, x: pt.Tensor, batch_index: int) -> float:
+        """
+        Calls _common_step for step 'val'.
+
+        Parameters
+        ----------
+        x: pt. Tensor
+            An input tensor
+        batch_index: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        float
+            Format expected by the parent class. The loss returned by _common_step.
+        """
         return self._common_step(x, batch_index, 'test')
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
+        """
+        Calls _common_step for step 'predict'.
+
+        Parameters
+        ----------
+       batch: pt. Tuple[dict, pt.Tensor]
+            An tuple of a metadata dictionary and the associated input data
+       batch_idx: int
+            The index of the batch.  Required to match the parent signature.  Unused in our model.
+        dataloader_idx: int
+            Index of the current dataloader.   Required to match the parent signature.  Unused in our model.
+
+        Returns
+        -------
+        Tuple[dict, pt.Tensor]
+            An tuple of the batch metadata dictionary and the associated output data
+        """
         meta, data = batch
         encoded, _ = self.forward(data)
         return meta, encoded
 
     def configure_optimizers(self) -> Dict:
+        """
+        Configures the optimizer and learning rate scheduler objects.
+
+        Returns
+        -------
+        dict
+            A dictionary with keys:
+
+            - optimizer: pt.optim.AdamW
+            - lr_scheduler: pt.optim.lr_scheduler.CosineAnnealingLR
+
+        See Also
+        --------
+        pytorch_lightning.core.lightning.LightningModule.configure_optimizers
+        """
         configured_optimizer = pt.optim.AdamW(self.parameters(), lr=self.__learning_rate_init)
         return {
             'optimizer': configured_optimizer,

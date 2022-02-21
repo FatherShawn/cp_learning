@@ -1,4 +1,11 @@
-"""Matcher for response pages to blockpage signatures."""
+"""
+Matcher for response pages to blockpage signatures.
+
+References
+----------
+Adapted from:
+https://github.com/censoredplanet/censoredplanet-analysis
+"""
 
 from collections import OrderedDict
 import json
@@ -41,7 +48,10 @@ class BlockpageMatcher:
   """
   Matcher to confirm blockpages or false positives.
 
-  Source: https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/blockpage.py
+  References
+  ----------
+  Adapted from:
+  https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/blockpage.py
   """
 
 
@@ -51,12 +61,17 @@ class BlockpageMatcher:
     self.blockpages = _load_signatures(BLOCKPAGES)
 
   def match_page(self, page: str) -> Tuple[Optional[bool], Optional[str]]:
-    """Check if the input page matches a known blockpage or false positive.
+    """
+    Check if the input page matches a known blockpage or false positive.
 
-    Args:
-      page: a string containing the HTTP body of the potential blockpage
+    Parameters
+    ----------
+      page: str
+        A string containing the HTTP body of the potential blockpage
 
-    Returns:
+    Returns
+    -------
+    Tuple[Optional[bool], Optional[str]]
       (match_outcome, match_fingerprint)
       match_outcome is
         True if page matches a blockpage signature.

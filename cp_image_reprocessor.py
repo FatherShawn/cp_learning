@@ -1,3 +1,6 @@
+"""
+Iterates through a QuackIterableDataset and creates a QuackImageDataset.
+"""
 from autoencoder import item_path
 from cp_tokenized_data import concatenate_data
 from cp_dataset import QuackIterableDataset
@@ -9,6 +12,28 @@ from nparray2png import nparray2png
 
 
 def main() -> None:
+    """
+    The reprocessing logic.
+
+    **Required** arguments are:
+
+         --source_path
+            *str* **Required** The path to top dir of the QuackIterableDataset.
+         --storage_path
+            *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
+         --filtered
+            *bool* Flag to only include censored and uncensored data.
+         --undetermined
+            *bool* Flat to include only undetermined data
+         --start
+            *int* The starting index in the QuackIterableDataset.
+         --end
+            *int* The ending index in the QuackIterableDataset.
+
+    Returns
+    -------
+    void
+    """
     # Add args to make a more flexible cli tool.
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--source_path', type=str, required=True)

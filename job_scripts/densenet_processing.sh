@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="densenetTuner"
+#SBATCH --job-name="densenetTrainer"
 #SBATCH --partition production
 #SBATCH --nodes=8
 #SBATCH --ntasks=64
@@ -72,9 +72,12 @@ done
 # change to the working directory
 cd $SLURM_WORKDIR
 
-echo ">>>> Begin densenetTuner"
+echo ">>>> Begin densenetTrainer"
 
-python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet autotune" \
+# \
+#--checkpoint_path $(pwd)/auto_checkpoints/densenet/last.ckpt
+
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet full fine-tune" \
 --data_dir $(pwd)/as_images \
 --accelerator cpu \
 --batch_size 8 \

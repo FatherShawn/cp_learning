@@ -9,12 +9,16 @@ from cp_image_dataset import QuackImageDataset
 
 class QuackImageTransformer:
 
-    def __init__(self, strategy: str) -> None:
+    def __init__(self, step: str, strategy: str) -> None:
         super().__init__()
         valid_types = {'randomize', 'simple'}
         if strategy not in valid_types:
             raise ValueError('Improper transform strategy.')
+        valid_steps = {'train', 'val', 'train', 'predict'}
+        if step not in valid_steps:
+            raise ValueError('Improper transform step.')
         self.__type = strategy
+        self.__step = step
         # For normalize configuration, see https://pytorch.org/hub/pytorch_vision_densenet/
         if self.__type == 'randomize':
             self.__transforms = transforms.Compose([
@@ -30,10 +34,9 @@ class QuackImageTransformer:
             ])
 
     def __call__(self, batch: List[dict], *args, **kwargs) -> Union[Tuple[pt.Tensor, pt.Tensor], Tuple[pt.Tensor, List[dict]]]:
-        if self.__type == 'train' or self.__type == 'val':
-            return self.__collate_labels(batch)
-        if self.__type == 'predict':
+        if self.__step == 'predict':
             return self.__collate_predict(batch)
+        return self.__collate_labels(batch)
 
     def __collate_labels(self, batch: List[dict]) -> Tuple[pt.Tensor, pt.Tensor]:
         """
@@ -109,7 +112,7 @@ class QuackImageDataModule(pl.LightningDataModule):
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         transform_strategy = 'simple' if self.__simple_transforms else 'randomize'
-        train_collate = QuackImageTransformer(strategy=transform_strategy)
+        train_collate = QuackImageTransformer(step='train', strategy=transform_strategy)
         return DataLoader(
             self.__train_data,
             batch_size=self.__batch_size,
@@ -120,7 +123,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        test_collate = QuackImageTransformer(strategy='simple')
+        test_collate = QuackImageTransformer(step='test', strategy='simple')
         return DataLoader(
             self.__test_data,
             batch_size=self.__batch_size,
@@ -130,7 +133,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        val_collate = QuackImageTransformer(strategy='simple')
+        val_collate = QuackImageTransformer(step='val', strategy='simple')
         return DataLoader(
             self.__val_data,
             batch_size=self.__batch_size,
@@ -140,7 +143,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
-        predict_collate = QuackImageTransformer(strategy='simple')
+        predict_collate = QuackImageTransformer(step='predict', strategy='simple')
         return DataLoader(
             self.__predict_data,
             batch_size=self.__batch_size,

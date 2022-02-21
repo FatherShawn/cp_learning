@@ -1,5 +1,3 @@
-import numpy as np
-import torch
 from pathlib import Path
 import pickle
 from torch.utils.data import Dataset
@@ -10,33 +8,53 @@ from cp_flatten import TokenizedQuackData, QuackConstants
 class QuackIterableDataset(Dataset):
     """
     Iterates or selectively retrieves items from a collection of python pickle files which contain TokenizedQuackData
-    length: The number of responses in the file.
-    censored: The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+
+    Metadata stored in metadata.pyc:
+
+    length
+        The number of responses in the file.
+    censored
+        The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
-    undetermined: The number of unlabeled responses.
-    uncensored The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
+    undetermined
+        The number of unlabeled responses.
+    uncensored
+        The number of responses labeled 'censored' by existing Censored Planet process. Dataset must have been
         flattened as "Labeled"
 
     Each response is stored in a single .pyc file, named with the index number of the response, zero based.
-    Metadata for the response is stored in the metadata key of the TokenizedQuackData typed dictionary:
-    domain: The domain under test
-    ip: The IPv4 address for this test
-    location: The country returned by MMDB for the IP address
-    timestamp: A Unix timestamp for the time of the test
-    censored: 1 if censored, -1 if uncensored, 0 as default (undetermined)
+    Metadata for the response is stored in the `metadata` key of the TokenizedQuackData typed dictionary:
+
+    domain
+        The domain under test
+    ip
+        The IPv4 address for this test
+    location
+        The country returned by MMDB for the IP address
+    timestamp
+        A Unix timestamp for the time of the test
+    censored
+        1 if censored, -1 if uncensored, 0 as default (undetermined)
 
     Each TokenizedQuackData stores two numpy arrays:
-    'static_size': Data that is a fixed size.  See cp_flatten.CensoredPlanetFlatten.__process_row
-    'variable_text' Text data that has been encoded (tokenized) using the XLMR pretrained model.
-        See cp_flatten.CensoredPlanetFlatten.__process_row
+
+    static_size
+        Data that is a fixed size.  See cp_flatten.CensoredPlanetFlatten.__process_row
+    variable_text
+        Text data that has been encoded (tokenized) using the XLMR pretrained model.
+
+    See Also
+    --------
+    cp_flatten.CensoredPlanetFlatten.__process_row
     """
 
     def __init__(self, path: str) -> None:
         """
+        Constructs the QuackIterableDataset object.
 
         Parameters
         ----------
-        paths: str
+        path: str
             A path to the top level of the data directories.
         """
         super().__init__()
@@ -63,23 +81,41 @@ class QuackIterableDataset(Dataset):
 
         Returns
         -------
-
+        Iterator[TokenizedQuackData]
         """
         for index in range(self.__length):
             file_path = self.__locate_item(index)
             yield self.__load_item(file_path)
 
-    def __getitem__(self, index) -> TokenizedQuackData:
+    def __getitem__(self, index: int) -> TokenizedQuackData:
         """
-        Implements a required method to access a single data point by index.
+         Implements a required method to access a single data point by index.
+
+        Parameters
+        ----------
+        index: int
+          The index of the data item.
+
+        Returns
+        -------
+        TokenizedQuackData
+            A dictionary (TypedDict) containing the data.
         """
         file_path = self.__locate_item(index)
         return self.__load_item(file_path)
 
     def __len__(self) -> int:
+        """
+
+        Returns
+        -------
+        int
+            The length of this dataset.
+
+        """
         return self.__length
 
-    def __load_item(self, item_path: Path) -> Union[TokenizedQuackData, torch.Tensor]:
+    def __load_item(self, item_path: Path) -> TokenizedQuackData:
         """
         Loads an item from a pickle file.
 
@@ -90,7 +126,8 @@ class QuackIterableDataset(Dataset):
 
         Returns
         -------
-
+        TokenizedQuackData
+            A dictionary (TypedDict) containing the data.
         """
         with item_path.open(mode='rb') as storage:
             item = pickle.load(storage)
@@ -107,7 +144,7 @@ class QuackIterableDataset(Dataset):
         Parameters
         ----------
         index: int
-          The index in the range of items for all the files combined.
+          The index of the item.
 
         Returns
         -------
@@ -122,13 +159,41 @@ class QuackIterableDataset(Dataset):
         return Path(f'{self.__path}/{segment_1}/{segment_2}/{index}.pyc')
 
     def censored(self) -> int:
+        """
+        Getter for the value of self.__censored.
+
+        Returns
+        -------
+        int
+        """
         return self.__censored
 
     def undetermined(self) -> int:
+        """
+        Getter for the value of self.__undetermined.
+
+        Returns
+        -------
+        int
+        """
         return self.__undetermined
 
     def uncensored(self) -> int:
+        """
+        Getter for the value of self.__uncensored.
+
+        Returns
+        -------
+        int
+        """
         return self.__uncensored
 
     def data_width(self) -> int:
+        """
+        Getter for the value of self.__max_width.
+
+        Returns
+        -------
+        int
+        """
         return self.__max_width
