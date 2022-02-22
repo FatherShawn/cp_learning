@@ -47,7 +47,7 @@ def item_path(index: int, suffix: str = 'png', dir_only: bool = False, is_collec
 
 class AutoencoderWriter(BasePredictionWriter):
     """
-    Extends prediction writer to store encoded Quack data.
+    Extends pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter to store encoded Quack data.
     """
 
     def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False) -> None:

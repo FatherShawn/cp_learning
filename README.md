@@ -1,6 +1,7 @@
 # Overview
 This repository contains the code written to support the research for my thesis 
-_Finding Latent Features in Internet Censorship Data_. Documentation for each python module
+_Finding Latent Features in Internet Censorship Data_. Documentation in markdown
+which has been generated from the docstrings within each python module
 may be found in the docs directory.  Links are given below.  
 
 # Documentation
