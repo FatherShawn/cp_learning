@@ -1,14 +1,74 @@
 """
 The densenet model with classes composed into the densenet class.
 """
-from pytorch_lightning.utilities.types import EPOCH_OUTPUT, STEP_OUTPUT
+import json
+from pytorch_lightning.utilities.types import EPOCH_OUTPUT
 from pytorch_lightning.utilities.distributed import rank_zero_info
-from typing import Any, List, Optional, TypedDict, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
+from pathlib import Path
 import torch as pt
 from torch import nn
 from torchvision import models
 import pytorch_lightning as pl
 import torchmetrics as tm
+from pytorch_lightning.callbacks import BasePredictionWriter
+
+
+class CensoredDataWriter(BasePredictionWriter):
+    """
+    Extends pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter
+    to store metadata for detected censorship.
+    """
+
+    def __init__(self, write_interval: str = "batch", storage_path: str = '~/data') -> None:
+        """
+               Constructor for AutoencoderWriter.
+
+               Parameters
+               ----------
+               write_interval: str
+                   See parent class BasePredictionWriter
+               storage_path: str
+                   A string file path to the directory in which output will be stored.
+        """
+        super().__init__(write_interval)
+        self.__storage_path = storage_path
+
+    def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
+                           batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
+                           dataloader_idx: int) -> None:
+        """
+        Logic to write the results of a single batch to files.
+
+        Parameters
+        ----------
+        Parameter signature defined in the parent class.
+
+        Returns
+        ----------
+        void
+
+        See Also
+        ----------
+        pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_batch_end
+        """
+        meta: List[dict]
+        processed: pt.Tensor
+        meta, processed = batch
+        # Copy to cpu and convert to numpy array.
+        prep_for_numpy = processed.cpu()
+        data = prep_for_numpy.numpy()
+        for outcome in data:
+            # Ensure storage is ready.
+            storage_path = Path(self.__storage_path)
+            storage_path.mkdir(parents=True, exist_ok=True)
+            data_storage = Path(self.__storage_path + 'densenet_detections.txt')
+            # Get metadata for this outcome.
+            outcome_meta = meta.pop(0)
+            if outcome >= 0.5:
+                # Predicted as censored.
+                with data_storage.open(mode='a') as target:
+                    json.dump(outcome_meta, target)
 
 
 class QuackDenseNet(pl.LightningModule):
@@ -69,6 +129,7 @@ class QuackDenseNet(pl.LightningModule):
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         """
+        Process a batch of input through the model.
 
         Parameters
         ----------
@@ -91,6 +152,24 @@ class QuackDenseNet(pl.LightningModule):
         return self.__to_probability(confidence)
 
     def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> Tuple[pt.Tensor, pt.Tensor, pt.Tensor]:
+        """
+        The step task in each loop type shares a common set of tasks.
+
+        Parameters
+        ----------
+        x: Tuple[pt.Tensor, pt.Tensor]
+            The batch
+        batch_index: int
+            The batch index
+        step_id: str
+            The step id.
+
+        Returns
+        -------
+        Tuple[pt.Tensor, pt.Tensor, pt.Tensor]
+            A tuple of batch losses, batch labels as integers, batch predictions as integers
+            each in a tensor.
+        """
         inputs, labels = x
         outputs = self.forward(inputs)
         # Binarize predictions to 0 and 1.
@@ -104,14 +183,14 @@ class QuackDenseNet(pl.LightningModule):
         # Return labels and output_labels for use in accuracy, which expects integer tensors.
         return loss, labels.to(pt.int8), output_labels.to(pt.int8)
 
-    def training_step(self, x: pt.Tensor, batch_index: int) -> dict:
+    def training_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int) -> dict:
         """
         Calls _common_step for step 'train'.
 
         Parameters
         ----------
-        x: pt. Tensor
-            An input tensor
+        x: Tuple[pt.Tensor, pt.Tensor]
+            The input tensor and a label tensor
         batch_index: int
             The index of the batch.  Required to match the parent signature.  Unused in our model.
 
@@ -130,14 +209,14 @@ class QuackDenseNet(pl.LightningModule):
         loss, expected, predicted = self._common_step(x, batch_index, 'train')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
-    def validation_step(self, x: pt.Tensor, batch_index: int) -> dict:
+    def validation_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int) -> dict:
         """
         Calls _common_step for step 'val'.
 
         Parameters
         ----------
-        x: pt. Tensor
-            An input tensor
+        x: Tuple[pt.Tensor, pt.Tensor]
+            The input tensor and a label tensor
         batch_index: int
             The index of the batch.  Required to match the parent signature.  Unused in our model.
 
@@ -156,14 +235,14 @@ class QuackDenseNet(pl.LightningModule):
         loss, expected, predicted = self._common_step(x, batch_index, 'val')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
-    def test_step(self, x: pt.Tensor, batch_index: int) -> dict:
+    def test_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int) -> dict:
         """
         Calls _common_step for step 'test'.
 
         Parameters
         ----------
-        x: pt. Tensor
-            An input tensor
+        x: Tuple[pt.Tensor, pt.Tensor]
+            The input tensor and a label tensor
         batch_index: int
             The index of the batch.  Required to match the parent signature.  Unused in our model.
 
@@ -182,13 +261,13 @@ class QuackDenseNet(pl.LightningModule):
         loss, expected, predicted = self._common_step(x, batch_index, 'test')
         return {'loss': loss, 'expected': expected, 'predicted': predicted}
 
-    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
+    def predict_step(self, batch: Tuple[pt.Tensor, List[dict]], batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
         """
         Calls _common_step for step 'predict'.
 
         Parameters
         ----------
-        batch: pt. Tuple[dict, pt.Tensor]
+        batch: Tuple[pt.Tensor, List[dict]]
             An tuple of a metadata dictionary and the associated input data
         batch_idx: int
             The index of the batch.  Required to match the parent signature.  Unused in our model.
