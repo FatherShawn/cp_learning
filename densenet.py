@@ -80,7 +80,7 @@ class QuackDenseNet(pl.LightningModule):
     https://pytorch.org/hub/pytorch_vision_densenet/
     """
     def __init__(self, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
-                 lr_max_epochs: int = -1, freeze: bool = True, *args: Any, **kwargs: Any) -> None:
+                 lr_max_epochs: int = -1, freeze: bool = True, balance:float = None, *args: Any, **kwargs: Any) -> None:
         """
         Constructor for QuackDenseNet.
 
@@ -120,10 +120,11 @@ class QuackDenseNet(pl.LightningModule):
         self.__val_f1 = tm.F1Score(num_classes=2)
         self.__test_acc = tm.Accuracy()
         self.__test_f1 = tm.F1Score(num_classes=2)
-        # We have 653481 uncensored (negative samples) and 215016 positive samples in our dataset.
-        # 653481 / 215016 = 3.0392203371
-        balance_factor = pt.tensor(3.039)
-        self.__loss_module = nn.BCEWithLogitsLoss(pos_weight=balance_factor)
+        self.__loss_module = nn.BCEWithLogitsLoss()
+        # If we have a balance factor passed, even the loss.
+        if balance is not None:
+            balance_factor = pt.tensor(balance)
+            self.__loss_module = nn.BCEWithLogitsLoss(pos_weight=balance_factor)
         # For tuning.
         self.batch_size = 2
 
@@ -143,13 +144,11 @@ class QuackDenseNet(pl.LightningModule):
         Returns
         -------
         pt.Tensor
-            The output, which should be (B, 1) sized, of single probability floats.
+            The output, which should be (B, 1) sized, of confidence score floats.
 
         """
         # Densenet outputs an un-normalized confidence score.
-        # Use sigmoid to transform to a probability.
-        confidence = self.__densenet(x)
-        return self.__to_probability(confidence)
+        return self.__densenet(x)
 
     def _common_step(self, x: Tuple[pt.Tensor, pt.Tensor], batch_index: int, step_id: str) -> Tuple[pt.Tensor, pt.Tensor, pt.Tensor]:
         """
@@ -280,7 +279,11 @@ class QuackDenseNet(pl.LightningModule):
             An tuple of the batch metadata dictionary and the associated output data
         """
         inputs, meta = batch
-        return meta, self.forward(inputs)
+        # Densenet outputs an un-normalized confidence score.
+        # Use sigmoid to transform to a probability.
+        confidence = self.forward(inputs)
+        output = self.__to_probability(confidence)
+        return meta, output
 
     def training_step_end(self, outputs: dict, *args, **kwargs):
         """
