@@ -80,7 +80,7 @@ class QuackDenseNet(pl.LightningModule):
     https://pytorch.org/hub/pytorch_vision_densenet/
     """
     def __init__(self, learning_rate: float = 1e-1, learning_rate_min: float = 1e-4,
-                 lr_max_epochs: int = -1, freeze: bool = True, balance:float = None, *args: Any, **kwargs: Any) -> None:
+                 lr_max_epochs: int = -1, freeze: bool = True, *args: Any, **kwargs: Any) -> None:
         """
         Constructor for QuackDenseNet.
 
@@ -121,12 +121,29 @@ class QuackDenseNet(pl.LightningModule):
         self.__test_acc = tm.Accuracy()
         self.__test_f1 = tm.F1Score(num_classes=2)
         self.__loss_module = nn.BCEWithLogitsLoss()
-        # If we have a balance factor passed, even the loss.
+        # For tuning.
+        self.batch_size = 2
+
+    def set_balanced_loss(self, balance: float):
+        """
+        Using the balance factor passed, even the loss.
+
+        Parameters
+        ----------
+        balance: float
+            The proportion of negative samples / positive samples.
+
+        Returns
+        -------
+        void
+
+        References
+        ----------
+        https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss#bcewithlogitsloss
+        """
         if balance is not None:
             balance_factor = pt.tensor(balance)
             self.__loss_module = nn.BCEWithLogitsLoss(pos_weight=balance_factor)
-        # For tuning.
-        self.batch_size = 2
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         """

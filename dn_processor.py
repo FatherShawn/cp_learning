@@ -85,6 +85,8 @@ def main(args: Namespace) -> None:
             lr_max_epochs=args.l_rate_max_epoch,
             freeze=args.freeze
     )
+    if args.balance is not None:
+        model.set_balanced_loss(args.balance)
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
@@ -146,6 +148,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)
     arg_parser.add_argument('--l_rate_max_epoch', type=int, default=-1)
+    arg_parser.add_argument('--balance', type=float)
     arg_parser.add_argument('--freeze', action='store_true', default=False)
     arg_parser.add_argument('--simple_transforms', action='store_true', default=False)
 
