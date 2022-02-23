@@ -188,11 +188,12 @@ class QuackDenseNet(pl.LightningModule):
         """
         inputs, labels = x
         outputs = self.forward(inputs)
+        loss = self.__loss_module(outputs, labels)
         # Binarize predictions to 0 and 1.
+        outputs = self.__to_probability(outputs)
         output_labels = outputs.ge(0.5).long()
         # Then match to labels type.
         output_labels = output_labels.to(pt.float)
-        loss = self.__loss_module(outputs, labels)
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True
         self.log(f"{step_id}_loss", loss, on_step=log_interval_option, sync_dist=log_sync)
