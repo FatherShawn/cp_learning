@@ -7,6 +7,7 @@ from cp_dataset import QuackIterableDataset
 from argparse import ArgumentParser
 from pathlib import Path
 import pickle
+import numpy as np
 from PIL import Image
 from nparray2png import nparray2png
 
@@ -52,6 +53,18 @@ def main() -> None:
         start = args.start
         end = args.end
         length = end - start
+
+    # Prepare to reduce the number of uncensored items.
+    rng = np.random.default_rng()
+    source_meta = Path(args.source_path + '/metadata.pyc')
+    try:
+        with source_meta.open(mode='rb') as retrieved_dict:
+            source_metadata = pickle.load(retrieved_dict)
+        reduction_factor = source_metadata['uncensored'] / source_metadata['censored']
+    except (OSError, KeyError):
+        reduction_factor = 1
+    print(f'Reduction factor is {reduction_factor:4f}.')
+
     try:
         with root_meta.open(mode='rb') as retrieved_dict:
             metadata = pickle.load(retrieved_dict)
@@ -79,9 +92,12 @@ def main() -> None:
         elif meta['censored'] == 0:
             if args.filtered:
                 continue
-            else:
-                metadata['undetermined'] += 1
+            metadata['undetermined'] += 1
         elif meta['censored'] == -1:
+            if args.filtered and rng.random() > reduction_factor:
+                # Randomly exclude in proportion to the reduction factor
+                # to keep the data balanced.
+                continue
             metadata['uncensored'] += 1
         # Store:
         pixels = nparray2png(concatenate_data(item))
