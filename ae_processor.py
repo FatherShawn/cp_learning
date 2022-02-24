@@ -122,12 +122,12 @@ def main(args: Namespace) -> None:
     device_logger = DeviceStatsMonitor()
     checkpoint_storage = Path(args.storage_path)
     checkpoint_storage.mkdir(parents=True, exist_ok=True)
+    # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
+    comet_logger = CometLogger(
+        project_name="censored-planet",
+        experiment_name=f'{args.exp_label}: {date_time}',
+    )
     if args.encode:
-        # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
-        comet_logger = CometLogger(
-            project_name="censored-planet",
-            experiment_name=f'autoencoder-encode: {date_time}',
-        )
         writer_callback = AutoencoderWriter(
             write_interval='batch_and_epoch',
             storage_path=args.storage_path,
@@ -138,19 +138,14 @@ def main(args: Namespace) -> None:
             args,
             logger=comet_logger,
             callbacks=[writer_callback, device_logger],
-            plugins=[ray_plugin]
+            strategy=ray_plugin,
         )
         model.freeze()
         print('Ready for inference...')
         trainer.predict(model, datamodule=data, return_predictions=False)
+        return
     else:
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
-        # API configuration for comet: https://www.comet.ml/docs/python-sdk/advanced/#python-configuration
-        # We have to instantiate by case if we want experiment names by case, due to CometLogger architecture.
-        comet_logger = CometLogger(
-            project_name="censored-planet",
-            experiment_name=f'{args.exp_label}: {date_time}',
-        )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             save_top_k=3,
