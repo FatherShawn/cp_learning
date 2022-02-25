@@ -152,7 +152,7 @@ def main(args: Namespace) -> None:
         print('Ready for training...')
         trainer.fit(model, datamodule=data)
         print('Post fit testing...')
-        trainer.test()
+        trainer.test(model, datamodule=data)
 
 
 if __name__ == '__main__':
