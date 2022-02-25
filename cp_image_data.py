@@ -14,7 +14,7 @@ class QuackImageTransformer:
         valid_types = {'randomize', 'simple'}
         if strategy not in valid_types:
             raise ValueError('Improper transform strategy.')
-        valid_steps = {'train', 'val', 'train', 'predict'}
+        valid_steps = {'train', 'val', 'test', 'predict'}
         if step not in valid_steps:
             raise ValueError('Improper transform step.')
         self.__type = strategy
