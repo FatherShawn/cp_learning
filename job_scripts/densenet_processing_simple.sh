@@ -77,14 +77,15 @@ echo ">>>> Begin simpleDensenet"
 # \
 #--checkpoint_path $(pwd)/auto_checkpoints/densenet/last.ckpt
 
-python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet full lr init 0.0002" \
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet full lr init 0.000001" \
 --data_dir $(pwd)/balanced_images \
 --accelerator cpu \
 --batch_size 8 \
---l_rate 0.0002 \
---l_rate_min 0.00001 \
+--l_rate 0.000001 \
+--l_rate_min 0.0000001 \
 --l_rate_max_epoch 10 \
 --ray_nodes 8 \
 --num_workers 6 \
 --storage_path $(pwd)/auto_checkpoints/densenet \
+--limit_train_batches 0.01 \
 --simple_transforms

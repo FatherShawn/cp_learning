@@ -40,22 +40,26 @@ def main() -> None:
     arg_parser.add_argument('--source_path', type=str, required=True)
     arg_parser.add_argument('--storage_path', type=str, required=True)
     arg_parser.add_argument('--filtered', action='store_true', default=False)
+    arg_parser.add_argument('--evaluate', action='store_true', default=False)
     arg_parser.add_argument('--start', type=int)
     arg_parser.add_argument('--end', type=int)
     args = arg_parser.parse_args()
 
+    # Initialize
     dataset = QuackIterableDataset(args.source_path)
     length = len(dataset)
     start = 0
     end = length
     root_meta = Path(args.storage_path + '/metadata.pyc')
+    is_filtered = args.filtered and not args.evaluate
+
     if args.start is not None and args.end is not None:
         start = args.start
         end = args.end
         length = end - start
-
     # Prepare to reduce the number of uncensored items.
     rng = np.random.default_rng()
+
     source_meta = Path(args.source_path + '/metadata.pyc')
     try:
         with source_meta.open(mode='rb') as retrieved_dict:
@@ -88,13 +92,15 @@ def main() -> None:
         data_storage = Path(args.storage_path + item_path(count, 'pyc', is_collection=True))
         # Count:
         if meta['censored'] == 1:
+            if args.evaluate:
+                continue
             metadata['censored'] += 1
         elif meta['censored'] == 0:
-            if args.filtered:
+            if is_filtered:
                 continue
             metadata['undetermined'] += 1
         elif meta['censored'] == -1:
-            if args.filtered and rng.random() > reduction_factor:
+            if args.evaluate or (is_filtered and rng.random() > reduction_factor):
                 # Randomly exclude in proportion to the reduction factor
                 # to keep the data balanced.
                 continue
