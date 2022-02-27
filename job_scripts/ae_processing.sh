@@ -73,7 +73,7 @@ done
 #\
 #--checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/epoch-40-step-178853.ckpt
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder epoch 42 continuing" \
+python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder epoch 45 continuing" \
 --data_dir $(pwd)/pickled \
 --accelerator cpu \
 --batch_size 2 \
@@ -81,9 +81,9 @@ python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder epoch 42 con
 --num_workers 6 \
 --embed_size 96 \
 --hidden_size 256 \
---l_rate 0.0033 \
+--l_rate 0.0032454813220625096 \
 --l_rate_min 0.0001 \
---l_rate_max_epoch 60 \
+--l_rate_max_epoch 55 \
 --limit_train_batches 0.1 \
---checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/last-41.ckpt \
+--checkpoint_path /scratch/shawn_bc_10/archived-checkpoints/autoenc_45_last.ckpt \
 --storage_path $(pwd)/auto_checkpoints/autoencoder

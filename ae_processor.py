@@ -153,7 +153,7 @@ def main(args: Namespace) -> None:
             mode='min',
             every_n_train_steps=2000,
             auto_insert_metric_name=True,
-            filename='checkpoint_{epoch:02d}-{step}-{val_loss:02.2f}',
+            filename='autoenc_checkpoint_{epoch:02d}-{step}-{val_loss:02.2f}',
             dirpath=checkpoint_storage
         )
         early_stopping_callback = EarlyStopping(
@@ -172,7 +172,7 @@ def main(args: Namespace) -> None:
         print('Ready for training...')
         trainer.fit(model, datamodule=data)
         print('Post fit testing...')
-        trainer.test(ckpt_path='best')
+        trainer.test(model, datamodule=data)
 
 
 if __name__ == '__main__':
