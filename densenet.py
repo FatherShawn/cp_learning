@@ -33,6 +33,7 @@ class CensoredDataWriter(BasePredictionWriter):
         """
         super().__init__(write_interval)
         self.__storage_path = storage_path
+        self.__found = 0.0
 
     def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
                            batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
@@ -59,15 +60,17 @@ class CensoredDataWriter(BasePredictionWriter):
         prep_for_numpy = processed.cpu()
         data = prep_for_numpy.numpy()
         for outcome in data:
-            # Ensure storage is ready.
-            storage_path = Path(self.__storage_path)
-            storage_path.mkdir(parents=True, exist_ok=True)
-            data_storage = Path(self.__storage_path + 'densenet_detections.txt')
-            # Get metadata for this outcome.
+            # Also step through the metadata.
             outcome_meta = meta.pop(0)
             if outcome >= 0.5:
+                self.__found += 1.0
+                trainer.logger.log_metrics({'found': self.__found})
+                # Prep storage.
+                storage_path = Path(self.__storage_path, outcome_meta['domain'])
+                storage_path.mkdir(parents=True, exist_ok=True)
+                data_storage = Path(storage_path, f"{outcome_meta['timestamp']}.json")
                 # Predicted as censored.
-                with data_storage.open(mode='a') as target:
+                with data_storage.open(mode='x') as target:
                     json.dump(outcome_meta, target)
 
 

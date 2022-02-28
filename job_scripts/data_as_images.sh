@@ -11,4 +11,4 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin imageConversion"
 
-python $(pwd)/cp_learning/cp_image_processor.py  --source_path $(pwd)/pickled --storage_path $(pwd)/as_images --filtered
+python $(pwd)/cp_learning/cp_image_reprocessor.py  --source_path $(pwd)/pickled --storage_path $(pwd)/unknown_images --evaluate

@@ -1,13 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name="init_lr:0.005"
+#SBATCH --job-name="densenetPredict"
 #SBATCH --partition production
 #SBATCH --nodes=8
 #SBATCH --ntasks=64
 #SBATCH --tasks-per-node=8
 #SBATCH --mem=44Gb
 
-# Auto re-submit
-#SBATCH --signal=SIGUSR1@90
 
 # change to the working directory
 cd $SLURM_WORKDIR
@@ -38,7 +36,7 @@ fi
 # __doc_head_address_end__
 
 # __doc_head_ray_start__
-port=6379
+port=37056
 ip_head=$head_node_ip:$port
 export ip_head
 echo "IP Head: $ip_head"
@@ -70,16 +68,18 @@ done
 # __doc_script_start__
 # ray/doc/source/cluster/examples/simple-trainer.py
 
-python $(pwd)/cp_learning/ae_processor.py  --exp_label "autoencoder init_lr:0.005" \
---data_dir $(pwd)/pickled \
---comet_storage $(pwd)/comet_storage_tune \
+
+# change to the working directory
+cd $SLURM_WORKDIR
+
+echo ">>>> Begin densenetPredict"
+
+python $(pwd)/cp_learning/dn_processor.py  --data_dir $(pwd)/unknown_images \
+--predict \
 --accelerator cpu \
---batch_size 2 \
+--batch_size 8 \
 --ray_nodes 8 \
 --num_workers 6 \
---embed_size 96 \
---hidden_size 256 \
---l_rate 0.005 \
---l_rate_min 0.0001 \
---l_rate_max_epoch 100 \
---limit_train_batches 250 --limit_val_batches 250
+--storage_path $(pwd)/densenet_predictions \
+--checkpoint_path $(pwd)/archived-checkpoints/densenet-finetuned/densenet_checkpoint_epoch--37-step--1785-val_loss--0.05.ckpt \
+--simple_transforms
