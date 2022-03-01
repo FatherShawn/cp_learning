@@ -74,7 +74,8 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin densenetPredict"
 
-python $(pwd)/cp_learning/dn_processor.py  --data_dir $(pwd)/unknown_images \
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet predict" \
+--data_dir $(pwd)/unknown_images \
 --predict \
 --accelerator cpu \
 --batch_size 8 \

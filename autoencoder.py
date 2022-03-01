@@ -103,7 +103,7 @@ class AutoencoderWriter(BasePredictionWriter):
         """
         meta: List[dict]
         processed: pt.Tensor
-        meta, processed = batch
+        meta, processed = prediction
         # Copy to cpu and convert to numpy array.
         prep_for_numpy = processed.cpu()
         data = prep_for_numpy.numpy()
