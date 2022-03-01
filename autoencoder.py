@@ -50,7 +50,12 @@ class AutoencoderWriter(BasePredictionWriter):
     Extends pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter to store encoded Quack data.
     """
 
-    def __init__(self, write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False) -> None:
+    def __init__(self,
+                 write_interval: str = 'batch',
+                 storage_path: str = '~/data',
+                 filtered: bool = False,
+                 evaluate: bool = False,
+                 reduction_threshold: float = 1.0) -> None:
         """
         Constructor for AutoencoderWriter.
 
@@ -69,6 +74,9 @@ class AutoencoderWriter(BasePredictionWriter):
         self.__storage_path = storage_path
         self.__filtered = filtered and not evaluate
         self.__evaluate = evaluate
+        # Prepare to reduce the number of uncensored items.
+        self.__rng = np.random.default_rng()
+        self.__reduction_threshold = reduction_threshold
         self.__root_meta = Path(storage_path + '/metadata.pyc')
         try:
             with self.__root_meta.open(mode='rb') as retrieved_dict:
@@ -126,7 +134,9 @@ class AutoencoderWriter(BasePredictionWriter):
                 else:
                     self.__metadata['undetermined'] += 1
             elif row_meta['censored'] == -1:
-                if self.__evaluate:
+                if self.__evaluate or (self.__filtered and self.__rng.random() > self.__reduction_threshold):
+                    # Randomly exclude in proportion to the reduction threshold
+                    # to keep the data balanced.
                     continue
                 else:
                     self.__metadata['uncensored'] += 1

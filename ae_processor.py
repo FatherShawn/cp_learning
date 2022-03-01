@@ -5,6 +5,7 @@ Autoencoder: autoencoder.QuackAutoEncoder().
 # You must import Comet before these modules: torch
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
+import pickle
 from time import gmtime, strftime
 from pathlib import Path
 from cp_flatten import QuackConstants
@@ -128,11 +129,19 @@ def main(args: Namespace) -> None:
         experiment_name=f'{args.exp_label}: {date_time}',
     )
     if args.encode:
+        source_meta = Path(args.data_dir + '/metadata.pyc')
+        try:
+            with source_meta.open(mode='rb') as retrieved_dict:
+                source_metadata = pickle.load(retrieved_dict)
+            reduction_factor = source_metadata['uncensored'] / source_metadata['censored']
+        except (OSError, KeyError):
+            reduction_factor = 1
         writer_callback = AutoencoderWriter(
             write_interval='batch_and_epoch',
             storage_path=args.storage_path,
             filtered=args.filtered,
-            evaluate=args.evaluate
+            evaluate=args.evaluate,
+            reduction_threshold=reduction_factor
         )
         trainer = Trainer.from_argparse_args(
             args,
