@@ -146,8 +146,7 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
-            callbacks=[writer_callback, device_logger],
-            strategy=ray_plugin,
+            callbacks=[writer_callback, device_logger]
         )
         model.freeze()
         print('Ready for inference...')
