@@ -35,6 +35,7 @@ class CensoredDataWriter(BasePredictionWriter):
         """
         super().__init__(write_interval)
         self.__storage_path = storage_path
+        self.__found = 0.0
 
     def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
                            batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
@@ -64,6 +65,8 @@ class CensoredDataWriter(BasePredictionWriter):
             # Also step through the metadata.
             outcome_meta = meta.pop(0)
             if outcome >= 0.5:
+                self.__found += 1.0
+                trainer.logger.log_metrics({'found': self.__found})
                 # Prep storage.
                 storage_path = Path(self.__storage_path, outcome_meta['domain'])
                 storage_path.mkdir(parents=True, exist_ok=True)
@@ -131,7 +134,6 @@ class QuackDenseNet(pl.LightningModule):
         self.__val_f1 = tm.F1Score(num_classes=2)
         self.__test_acc = tm.Accuracy()
         self.__test_f1 = tm.F1Score(num_classes=2)
-        self.__prediction_found = tm.SumMetric()
         self.__loss_module = nn.BCEWithLogitsLoss()
         # For tuning.
         self.batch_size = 2
@@ -380,33 +382,6 @@ class QuackDenseNet(pl.LightningModule):
         self.__test_acc.update(outputs['predicted'], outputs['expected'])
         self.__test_f1.update(outputs['predicted'], outputs['expected'])
 
-    def on_predict_batch_end(self, outputs: Optional[Any], batch: Any, batch_idx: int, dataloader_idx: int) -> None:
-        """
-        When using distributed backends, only a portion of the batch is inside the `predict_step`.
-        We calculate metrics here with the entire batch.
-
-        Parameters
-        ----------
-        outputs: dict
-            The return values from `predict_step` for each batch part.
-        args: Any
-            Matching to the parent constructor.
-        kwargs: Any
-            Matching to the parent constructor.
-
-        Returns
-        -------
-        void
-        """
-        processed: pt.Tensor
-        _, processed = outputs
-        # Copy to cpu and convert to numpy array.
-        prep_for_numpy = processed.cpu()
-        data = prep_for_numpy.numpy()
-        for outcome in data:
-            if outcome >= 0.5:
-                self.__prediction_found.update(1.0)
-
     def test_epoch_end(self, outputs: EPOCH_OUTPUT) -> None:
         """
         Called at the end of a test epoch with the output of all test steps.
@@ -446,24 +421,6 @@ class QuackDenseNet(pl.LightningModule):
         self.__val_f1.compute()
         self.log('val_acc', self.__val_acc)
         self.log('val_f1', self.__val_f1)
-
-    def on_predict_epoch_end(self, results: List[Any]) -> None:
-        """
-        Called at the end of a prediction epoch.
-
-        Now that all the prediction batches are complete, we compute the metrics.
-
-        Parameters
-        ----------
-        results: None
-            No outputs are passed on from `on_predict_batch_end`.
-
-        Returns
-        -------
-        void
-        """
-        self.__prediction_found.compute()
-        self.log('prediction_found', self.__prediction_found)
 
     def configure_optimizers(self):
         """
