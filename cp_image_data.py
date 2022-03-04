@@ -98,6 +98,7 @@ class QuackImageDataModule(pl.LightningDataModule):
         dataset = QuackImageDataset(data_dir)
         self.__predict_data = QuackImageDataset(data_dir)
         print(f'Source dataset ready with {len(dataset)} items.')
+        print(f'Prediction dataset ready with {len(self.__predict_data)} items.')
         self.__width = dataset.data_width()
         # Reserve 20% of the data as test data.
         test_reserve = round(len(dataset) * 0.2)

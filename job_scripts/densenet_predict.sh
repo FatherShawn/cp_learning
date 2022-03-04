@@ -81,6 +81,7 @@ python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet predict" \
 --batch_size 8 \
 --ray_nodes 8 \
 --num_workers 6 \
---storage_path $(pwd)/densenet_predictions \
+--storage_path $(pwd)/densenet_debug \
 --checkpoint_path $(pwd)/archived-checkpoints/densenet-finetuned/densenet_checkpoint_epoch--37-step--1785-val_loss--0.05.ckpt \
---simple_transforms
+--simple_transforms \
+--limit_predict_batches 1

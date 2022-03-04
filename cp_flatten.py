@@ -16,7 +16,7 @@ from dateutil.parser import isoparse
 from fairseq.models.roberta import XLMRModel
 from io import BufferedReader
 from torch.utils.data import IterableDataset
-from typing import Any, Callable, Dict, Iterator, Set, Tuple, TypedDict, Union, List
+from typing import Any, Callable, Dict, Iterator, Tuple, TypedDict, Union, List
 from urlextract import URLExtract
 from webdataset import ShardList, Shorthands, tariterators, url_opener
 
@@ -93,21 +93,17 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
     - `process_hyperquack_v1`
     - `process_hyperquack_v2`
     - `extract_domain_from_sent_field`
-
-    Parameters
-    ----------
-    self.__shards: ShardList
-        The dataset to use a pipeline source.
-    self.__blockpage_matcher: BlockpageMatcher
-        The blockpage matching utility.
-    self.__labeled: bool
-        Should the data be labeled as censored?
-    self.__xlmr: object
-        The XLMR pretrained tokenizer.
     """
 
 
-    def __init__(self, urls: Union[str, List[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False) -> None:
+    def __init__(self,
+                 urls: Union[str, List[str]],
+                 vocab_path: str = '',
+                 compare: bool = False,
+                 labeled: bool = False,
+                 anomalies: bool = False,
+                 raw: bool = False
+                 ) -> None:
         """
 
         Parameters
@@ -123,6 +119,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
             Should only data successfully precessed by blockpage matcher be returned?
         anomalies: bool
             Should only data marked by Censored Planet as an anomaly be processed?
+        raw: bool
+            Should the raw row be returned without processing into vectors?
         """
         super().__init__()
 
@@ -135,15 +133,20 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__labeled = labeled
         self.__compare = labeled or compare
         self.__anomalies = anomalies
+        self.__raw = raw
         # Bring in the MMDB free database.
         self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
-        # Bring in the pretrained XLMR model.
-        self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
-        self.__xlmr.eval()
-        self.__vocab_path = vocab_path
-        with open(vocab_path, 'rb') as retrieved_dict:
-            self.__vocab = pickle.load(retrieved_dict)
-        self.__vocab_next = len(self.__vocab)
+        if not self.__raw:
+            # Bring in the pretrained XLMR model.
+            self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
+            self.__xlmr.eval()
+            self.__vocab_path = vocab_path
+            try:
+                with open(vocab_path, 'rb') as retrieved_dict:
+                    self.__vocab = pickle.load(retrieved_dict)
+            except OSError:
+                self.__vocab = dict()
+            self.__vocab_next = len(self.__vocab)
 
 
     def __getitem__(self, index) -> T_co:
@@ -153,14 +156,15 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         pass
 
-    def __iter__(self) -> Iterator[TokenizedQuackData]:
+    def __iter__(self) -> Union[Iterator[TokenizedQuackData], Iterator[Row]]:
         """
         Iterates the data in the .tar files.
 
         Returns
         -------
-        TokenizedQuackData
-            A dictionary (TypedDict) containing flattened data for a single item.
+        Union[Iterator[TokenizedQuackData], Iterator[Row]]
+            A dictionary (TypedDict) containing flattened data for a single item or if self.__raw is true, the
+            unprocessed (Row) dictionary of row data is returned.
         """
         for quack_file in url_opener(self.__shards):
             for filestream in self.__quack_file_expander(quack_file):
@@ -201,11 +205,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                         iterate_lines = False
                     except Exception as exn:
                         tariterators.reraise_exception(exn)
-        # Save the xlmr -> vocab token mapping:
-        with open(self.__vocab_path, 'wb') as stored_dict:
-            pickle.dump(self.__vocab, stored_dict)
-        print(f"All items flattened.  Re-mapped vocabulary has {len(self.__vocab)} items.")
-
+        if not self.__raw:
+            # Save the xlmr -> vocab token mapping:
+            with open(self.__vocab_path, 'wb') as stored_dict:
+                pickle.dump(self.__vocab, stored_dict)
+            print(f"All items flattened.  Re-mapped vocabulary has {len(self.__vocab)} items.")
 
     # Utility iterators to keep __iter__ readable.
 
@@ -277,7 +281,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         except Exception as exn:
             handler(exn)
 
-    def __process_hyperquack_v1(self, scan: Dict) -> Iterator[TokenizedQuackData]:
+    def __process_hyperquack_v1(self, scan: Dict) -> Union[Iterator[TokenizedQuackData], Iterator[Row]]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V1 format.
 
@@ -288,7 +292,9 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Yields
         -------
-        TokenizedQuackData
+        Union[Iterator[TokenizedQuackData], Iterator[Row]]
+            A dictionary (TypedDict) containing flattened data for a single item or if self.__raw is true, the
+            unprocessed (Row) dictionary of row data
 
         References
         ----------
@@ -356,9 +362,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_body=received_fields['received_body']
             )
             meta_tensor = self.__process_row(row)
-            yield  meta_tensor
+            if self.__raw:
+                yield row
+            yield meta_tensor
 
-    def __process_hyperquack_v2(self, scan: Dict) -> Iterator[TokenizedQuackData]:
+    def __process_hyperquack_v2(self, scan: Dict) -> Union[Iterator[TokenizedQuackData], Iterator[Row]]:
         """
         Process a line of Echo/Discard/HTTP/S data in HyperQuack V2 format.
 
@@ -369,7 +377,9 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
 
         Yields
         -------
-        TokenizedQuackData
+        Union[Iterator[TokenizedQuackData], Iterator[Row]]
+            A dictionary (TypedDict) containing flattened data for a single item or if self.__raw is true, the
+            unprocessed (Row) dictionary of row data
 
         References
         ----------
@@ -432,6 +442,8 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_headers=received_fields['received_headers'],
                 received_body=received_fields['received_body']
             )
+            if self.__raw:
+                yield row
             yield self.__process_row(row)
 
     def __process_row(self, row: Row) -> TokenizedQuackData:
