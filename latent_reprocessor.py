@@ -21,12 +21,6 @@ def main() -> None:
             *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
 
     **Optional** arguments are:
-        ` --reduction_factor`
-            *float* Probability to include uncensored data.
-        ` --filtered`
-            *bool* Flag to only include censored and uncensored data.
-         `--undetermined`
-            *bool* Flag to include only undetermined data
          `--start`
             *int* The starting index in the QuackIterableDataset.
          `--end`
@@ -40,9 +34,6 @@ def main() -> None:
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--source_path', type=str, required=True)
     arg_parser.add_argument('--storage_path', type=str, required=True)
-    arg_parser.add_argument('--filtered', action='store_true', default=False)
-    arg_parser.add_argument('--evaluate', action='store_true', default=False)
-    arg_parser.add_argument('--reduction_factor', type=float)
     args = arg_parser.parse_args()
 
     # Initialize
@@ -70,18 +61,10 @@ def main() -> None:
             data_storage = Path(args.storage_path + item_path(count, 'pyc'))
             # Count:
             if item['metadata']['censored'] == 1:
-                if args.evaluate:
-                    continue
                 metadata['censored'] += 1
             elif item['metadata']['censored'] == 0:
-                if is_filtered:
-                    continue
                 metadata['undetermined'] += 1
             elif item['metadata']['censored'] == -1:
-                if args.evaluate or (is_filtered and rng.random() > args.reduction_factor):
-                    # Randomly exclude in proportion to the reduction factor
-                    # to keep the data balanced.
-                    continue
                 metadata['uncensored'] += 1
             # Store:
             with data_storage.open(mode='wb') as target:
