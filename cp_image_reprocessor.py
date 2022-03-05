@@ -22,10 +22,12 @@ def main() -> None:
             *str* **Required** The path to top dir of the QuackIterableDataset.
          `--storage_path`
             *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
+
+    **Optional** arguments are:
         ` --filtered`
             *bool* Flag to only include censored and uncensored data.
          `--undetermined`
-            *bool* Flat to include only undetermined data
+            *bool* Flag to include only undetermined data
          `--start`
             *int* The starting index in the QuackIterableDataset.
          `--end`
