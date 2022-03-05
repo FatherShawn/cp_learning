@@ -133,7 +133,7 @@ def main(args: Namespace) -> None:
         try:
             with source_meta.open(mode='rb') as retrieved_dict:
                 source_metadata = pickle.load(retrieved_dict)
-            reduction_factor = source_metadata['uncensored'] / source_metadata['censored']
+            reduction_factor = source_metadata['censored'] / source_metadata['uncensored']
         except (OSError, KeyError):
             reduction_factor = 1
         writer_callback = AutoencoderWriter(

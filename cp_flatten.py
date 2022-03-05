@@ -134,9 +134,9 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         self.__compare = labeled or compare
         self.__anomalies = anomalies
         self.__raw = raw
-        # Bring in the MMDB free database.
-        self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
         if not self.__raw:
+            # Bring in the MMDB free database.
+            self.__ip2geo = geoip2.database.Reader('./mmdb/country.mmdb')
             # Bring in the pretrained XLMR model.
             self.__xlmr = XLMRModel.from_pretrained('/data/xlmr.large', checkpoint_file='model.pt')
             self.__xlmr.eval()
@@ -156,7 +156,7 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         """
         pass
 
-    def __iter__(self) -> Union[Iterator[TokenizedQuackData], Iterator[Row]]:
+    def __iter__(self) -> Iterator[Union[TokenizedQuackData, Row]]:
         """
         Iterates the data in the .tar files.
 
@@ -361,10 +361,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_headers=received_fields['received_headers'],
                 received_body=received_fields['received_body']
             )
-            meta_tensor = self.__process_row(row)
             if self.__raw:
-                yield row
-            yield meta_tensor
+                result = row
+            else:
+                result = self.__process_row(row)
+            yield result
 
     def __process_hyperquack_v2(self, scan: Dict) -> Union[Iterator[TokenizedQuackData], Iterator[Row]]:
         """
@@ -443,8 +444,10 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
                 received_body=received_fields['received_body']
             )
             if self.__raw:
-                yield row
-            yield self.__process_row(row)
+                result = row
+            else:
+                result = self.__process_row(row)
+            yield result
 
     def __process_row(self, row: Row) -> TokenizedQuackData:
         """

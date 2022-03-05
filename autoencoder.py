@@ -13,6 +13,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import BasePredictionWriter
 
+
 def item_path(index: int, suffix: str = 'png', dir_only: bool = False, is_collection: bool = False) -> str:
     """
     A helper function to construct a file path string given a data item index.
@@ -77,19 +78,6 @@ class AutoencoderWriter(BasePredictionWriter):
         # Prepare to reduce the number of uncensored items.
         self.__rng = np.random.default_rng()
         self.__reduction_threshold = reduction_threshold
-        self.__root_meta = Path(storage_path + '/metadata.pyc')
-        try:
-            with self.__root_meta.open(mode='rb') as retrieved_dict:
-                metadata = pickle.load(retrieved_dict)
-                self.__count = metadata['length']
-        except OSError:
-            self.__count = 0
-            self.__metadata = {
-                'censored': 0,
-                'undetermined': 0,
-                'uncensored': 0,
-                'length': 0
-            }
 
     def write_on_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", prediction: Any,
                            batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int,
@@ -116,17 +104,18 @@ class AutoencoderWriter(BasePredictionWriter):
         prep_for_numpy = processed.cpu()
         data = prep_for_numpy.numpy()
         for row in data:
-            # Ensure storage is ready.
-            storage_path = Path(self.__storage_path + item_path(self.__count, dir_only=True))
-            storage_path.mkdir(parents=True, exist_ok=True)
-            data_storage = Path(self.__storage_path + item_path(self.__count, 'pyc'))
             # Get this row's metadata.
             row_meta = meta.pop(0)
-            # Count:
+            # Ensure storage is ready.
+            storage_path = Path(self.__storage_path, row_meta['domain'], item_path(row_meta['timestamp'], dir_only=True))
+            storage_path.mkdir(parents=True, exist_ok=True)
+            data_storage = Path(storage_path, item_path(row_meta['timestamp'], 'pyc'))
+            # Evaluate for filtering:
             if row_meta['censored'] == 1:
                 if self.__evaluate:
                     continue
                 else:
+                    # trainer.logger.log_metrics({'found': self.__found})
                     self.__metadata['censored'] += 1
             elif row_meta['censored'] == 0:
                 if self.__filtered:
@@ -148,31 +137,15 @@ class AutoencoderWriter(BasePredictionWriter):
             }
             with data_storage.open(mode='wb') as target:
                 pickle.dump(data, target)
-            self.__count += 1
 
     def write_on_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", predictions: Sequence[Any],
                            batch_indices: Optional[Sequence[Any]]) -> None:
         """
-        Logic to write the metadata for the data processed to file.
-
-        Parameters
-        ----------
-        Parameter signature defined in the parent class.
-
-        Returns
-        ----------
-        void
-
-        See Also
-        ----------
-        pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter.write_on_epoch_end
+        This class runs on every distributed node and aggregation is not practical due to the size of our dataset.  We
+        do not save the predictions after the batch to avoid running out of memory. Method is required but therefore
+        nothing to do here.
         """
-        # Store dataset level metadata.
-        root_meta = Path(self.__storage_path + '/metadata.pyc')
-        self.__metadata['length'] = self.__count
-        with root_meta.open(mode='wb') as stored_dict:
-            pickle.dump(self.__metadata, stored_dict)
-
+        pass
 
 class AttentionScore(nn.Module):
     """
