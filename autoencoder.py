@@ -107,9 +107,9 @@ class AutoencoderWriter(BasePredictionWriter):
             # Get this row's metadata.
             row_meta = meta.pop(0)
             # Ensure storage is ready.
-            storage_path = Path(self.__storage_path, row_meta['domain'], item_path(row_meta['timestamp'], dir_only=True))
+            storage_path = Path(self.__storage_path + item_path(row_meta['timestamp'], dir_only=True))
             storage_path.mkdir(parents=True, exist_ok=True)
-            data_storage = Path(storage_path, item_path(row_meta['timestamp'], 'pyc'))
+            data_storage = Path(self.__storage_path + item_path(row_meta['timestamp'], 'pyc'))
             # Evaluate for filtering:
             if row_meta['censored'] == 1:
                 if self.__evaluate:
