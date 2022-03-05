@@ -1,12 +1,13 @@
 """
-Iterates through a QuackIterableDataset and creates a QuackImageDataset.
+Iterates through the output of the prediction loop from QuackAutoencoder and structures the files for use
+as a dataset.
 """
 from autoencoder import item_path
 from argparse import ArgumentParser
 from pathlib import Path
 import os
 import pickle
-import numpy as np
+import shutil
 
 
 def main() -> None:
@@ -37,13 +38,6 @@ def main() -> None:
     args = arg_parser.parse_args()
 
     # Initialize
-
-    is_filtered = args.filtered and not args.evaluate
-
-    # Prepare to reduce the number of uncensored items.
-    rng = np.random.default_rng()
-
-    source_meta = Path(args.source_path + '/metadata.pyc')
     count = 0
     metadata = {
         'censored': 0,
@@ -66,9 +60,8 @@ def main() -> None:
                 metadata['undetermined'] += 1
             elif item['metadata']['censored'] == -1:
                 metadata['uncensored'] += 1
-            # Store:
-            with data_storage.open(mode='wb') as target:
-                pickle.dump(item, target)
+            # Move:
+            shutil.move(file, data_storage)
             count += 1
             if count % 10000 == 0:
                 print(f'Processed {count:,} items.')
