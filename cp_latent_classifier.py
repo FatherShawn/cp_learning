@@ -49,7 +49,7 @@ class QuackLatentClassifier(pl.LightningModule):
             nn.LeakyReLU(leak_rate),
             nn.Linear(initial_size // 4, initial_size // 8),
             nn.LeakyReLU(leak_rate),
-            nn.Linear(initial_size // 8, initial_size // 1)
+            nn.Linear(initial_size // 8, 1)
         )
         self.__loss_module = nn.BCEWithLogitsLoss()
 
