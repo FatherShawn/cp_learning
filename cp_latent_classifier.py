@@ -1,7 +1,7 @@
 """
 The latent classifier model with classes composed into the classifier class.
 """
-from typing import Any, Tuple, Sequence, Optional
+from typing import Any, Tuple, List, Optional
 import torch as pt
 from torch import nn
 import pytorch_lightning as pl

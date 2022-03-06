@@ -1,4 +1,4 @@
-from typing import Tuple, List, Union, Callable
+from typing import Tuple, List, Union
 import torch as pt
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
