@@ -114,21 +114,14 @@ class AutoencoderWriter(BasePredictionWriter):
             if row_meta['censored'] == 1:
                 if self.__evaluate:
                     continue
-                else:
-                    # trainer.logger.log_metrics({'found': self.__found})
-                    self.__metadata['censored'] += 1
             elif row_meta['censored'] == 0:
                 if self.__filtered:
                     continue
-                else:
-                    self.__metadata['undetermined'] += 1
             elif row_meta['censored'] == -1:
                 if self.__evaluate or (self.__filtered and self.__rng.random() > self.__reduction_threshold):
                     # Randomly exclude in proportion to the reduction threshold
                     # to keep the data balanced.
                     continue
-                else:
-                    self.__metadata['uncensored'] += 1
 
             # Store:
             data = {
