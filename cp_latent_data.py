@@ -8,7 +8,7 @@ from cp_latent_dataset import QuackLatentData, QuackLatentDataset
 
 class QuackLatentCollator:
 
-    def __init__(self, step: str, strategy: str) -> None:
+    def __init__(self, step: str) -> None:
         super().__init__()
         valid_steps = {'train', 'val', 'test', 'predict'}
         if step not in valid_steps:
