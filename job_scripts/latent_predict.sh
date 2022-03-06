@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="latentClassifier"
+#SBATCH --job-name="densenetPredict"
 #SBATCH --partition production
 #SBATCH --nodes=8
 #SBATCH --ntasks=64
@@ -36,7 +36,7 @@ fi
 # __doc_head_address_end__
 
 # __doc_head_ray_start__
-port=37057
+port=37056
 ip_head=$head_node_ip:$port
 export ip_head
 echo "IP Head: $ip_head"
@@ -72,18 +72,15 @@ done
 # change to the working directory
 cd $SLURM_WORKDIR
 
-echo ">>>> Begin latentClassifier"
+echo ">>>> Begin densenetPredict"
 
-# \
-#--checkpoint_path $(pwd)/auto_checkpoints/densenet/last.ckpt
-
-python $(pwd)/cp_learning/latent_processor.py  --exp_label "latent lr init 0.000001" \
---data_dir $(pwd)/labeled_encoded \
+python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet predict" \
+--data_dir $(pwd)/unknown_images \
+--predict \
 --accelerator cpu \
 --batch_size 8 \
---l_rate 0.000001 \
---l_rate_min 0.0000001 \
---l_rate_max_epoch 10 \
 --ray_nodes 8 \
 --num_workers 6 \
---storage_path $(pwd)/auto_checkpoints/latent
+--storage_path $(pwd)/latent_debug \
+--checkpoint_path $(pwd)/archived-checkpoints/latent_checkpoint-step--122667-val_loss--0.05.ckpt \
+--limit_predict_batches 1
