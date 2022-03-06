@@ -81,8 +81,7 @@ def main(args: Namespace) -> None:
             initial_size=256,
             learning_rate=args.l_rate,
             learning_rate_min=args.l_rate_min,
-            lr_max_epochs=args.l_rate_max_epoch,
-            freeze=args.freeze
+            lr_max_epochs=args.l_rate_max_epoch
     )
     if args.checkpoint_path is not None:
         model = QuackLatentClassifier.load_from_checkpoint(
