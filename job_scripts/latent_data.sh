@@ -11,4 +11,4 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin latentData"
 
-python $(pwd)/cp_learning/latent_reprocessor.py  --source_path $(pwd)/encoded --storage_path $(pwd)/labeled_encoded --filtered --reduction_factor 0.329032
+python $(pwd)/cp_learning/latent_reprocessor.py  --source_path $(pwd)/encoded --storage_path $(pwd)/labeled_encoded
