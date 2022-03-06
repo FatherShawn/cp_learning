@@ -1,5 +1,5 @@
 """
-Defines a class and data structures for flattened quack data stored as images and pixel tensors.
+Defines a class and data structures for quack data en tensors.
 """
 import numpy as np
 import torch
@@ -9,17 +9,17 @@ from torch.utils.data import Dataset
 from typing import Iterator, Union, TypedDict
 
 
-class QuackImageData(TypedDict):
+class QuackLatentData(TypedDict):
     """
-    Flattened quack data and associated metadata.
+    Encoded quack data and associated metadata.
     """
     metadata: dict
-    pixels: np.ndarray
+    encoded: np.ndarray
 
 
-class QuackImageDataset(Dataset):
+class QuackLatentDataset(Dataset):
     """
-    Iterates or selectively retrieves items from a collection of python pickle files which contain QuackImageData
+    Iterates or selectively retrieves items from a collection of python pickle files which contain QuackLatentData
 
     Metadata stored in metadata.pyc:
 
@@ -48,7 +48,7 @@ class QuackImageDataset(Dataset):
     censored
         1 if censored, -1 if uncensored, 0 as default (undetermined)
 
-    Each QuackImageData stores one numpy array:
+    Each QuackLatentData stores one numpy array:
 
     pixels
         A (224, 224) numpy array of pixel data
@@ -84,7 +84,7 @@ class QuackImageDataset(Dataset):
         self.__undetermined = metadata['undetermined']
         self.__uncensored = metadata['uncensored']
 
-    def __iter__(self) -> Iterator[QuackImageData]:
+    def __iter__(self) -> Iterator[QuackLatentData]:
         """
         Iterates through all data points in the dataset.
 
@@ -96,7 +96,7 @@ class QuackImageDataset(Dataset):
             file_path = self.__locate_item(index)
             yield self.__load_item(file_path)
 
-    def __getitem__(self, index) -> QuackImageData:
+    def __getitem__(self, index) -> QuackLatentData:
         """
         Implements a required method to access a single data point by index.
 
@@ -115,7 +115,7 @@ class QuackImageDataset(Dataset):
     def __len__(self) -> int:
         return self.__length
 
-    def __load_item(self, item_path: Path) -> Union[QuackImageData, torch.Tensor]:
+    def __load_item(self, item_path: Path) -> QuackLatentData:
         """
         Loads an item from a pickle file.
 
@@ -126,13 +126,13 @@ class QuackImageDataset(Dataset):
 
         Returns
         -------
-
+        QuackLatentData
         """
         with item_path.open(mode='rb') as storage:
             item = pickle.load(storage)
-        return QuackImageData(
+        return QuackLatentData(
             metadata=item['metadata'],
-            pixels=item['pixels']
+            encoded=item['encoded']
         )
 
     def __locate_item(self, index: int) -> Path:

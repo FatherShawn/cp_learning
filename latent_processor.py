@@ -1,14 +1,15 @@
 """
 A controller script for configuring and launching Pytorch Lightning's Trainer for the
-Densenet model: densenet.QuackDenseNet().
+QuackLatentClassifier model: cp_latent_classifier.QuackLatentClassifier().
 """
 # You must import Comet before these modules: torch
 # https://github.com/PyTorchLightning/pytorch-lightning/issues/5829.
 import comet_ml
 from time import gmtime, strftime
 from pathlib import Path
-from cp_image_data import QuackImageDataModule
-from densenet import QuackDenseNet, CensoredDataWriter
+from cp_latent_data import QuackLatentDataModule
+from densenet import CensoredDataWriter
+from cp_latent_classifier import QuackLatentClassifier
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor
 from pytorch_lightning.loggers import CometLogger
@@ -21,8 +22,8 @@ def main(args: Namespace) -> None:
     The executable logic for this controller.
 
     For the training loop:
-    - Instantiates a data object using `cp_image_data.QuackImageDataModule`.
-    - Instantiates a model using `densenet.QuackDenseNet`.
+    - Instantiates a data object using `cp_latent_data.QuackLatentDataModule`.
+    - Instantiates a model using `cp_latent_classifier.QuackLatentClassifier`.
     - Instantiates a strategy plugin using `ray_lightning.ray_ddp.RayPlugin`.
     - Instantiates callback objects:
     -- A logger using `pytorch_lightning.loggers.comet.CometLogger`
@@ -65,35 +66,31 @@ def main(args: Namespace) -> None:
          `--freeze`
             *bool* Flag to construct so that the image analyzing layers of the pre-trained Densenet are frozen for
             training.
-         `--simple_transforms`
-            *bool* Flag passed to the data module to simplify image transforms.
 
     Returns
     -------
     void
 
     """
-    data = QuackImageDataModule(
+    data = QuackLatentDataModule(
         args.data_dir,
         batch_size=args.batch_size,
-        workers=args.num_workers,
-        simple_transforms=args.simple_transforms
+        workers=args.num_workers
     )
-    model = QuackDenseNet(
+    model = QuackLatentClassifier(
+            initial_size=256,
             learning_rate=args.l_rate,
             learning_rate_min=args.l_rate_min,
             lr_max_epochs=args.l_rate_max_epoch,
             freeze=args.freeze
     )
     if args.checkpoint_path is not None:
-        model = QuackDenseNet.load_from_checkpoint(
+        model = QuackLatentClassifier.load_from_checkpoint(
             args.checkpoint_path,
             learning_rate=args.l_rate,
             learning_rate_min=args.l_rate_min,
             lr_max_epochs=args.l_rate_max_epoch
         )
-    if args.balance is not None:
-        model.set_balanced_loss(args.balance)
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,
         num_cpus_per_worker=1,
@@ -111,7 +108,7 @@ def main(args: Namespace) -> None:
     )
     if args.predict:
         writer_callback = CensoredDataWriter(
-            write_interval='batch_and_epoch',
+            write_interval='batch',
             storage_path=args.storage_path
         )
         trainer = Trainer.from_argparse_args(
@@ -132,7 +129,7 @@ def main(args: Namespace) -> None:
             save_top_k=3,
             save_last=True,
             auto_insert_metric_name=True,
-            filename='densenet_checkpoint_{epoch:02d}-{step}-{val_loss:02.2f}',
+            filename='latent_checkpoint-{step}-{val_loss:02.2f}',
             dirpath=checkpoint_storage,
         )
         early_stopping_callback = EarlyStopping(
@@ -163,14 +160,12 @@ if __name__ == '__main__':
     arg_parser.add_argument('--num_workers', type=int, default=0)
     arg_parser.add_argument('--checkpoint_path', type=str)
     arg_parser.add_argument('--storage_path', type=str, default='./data/encoded')
-    arg_parser.add_argument('--exp_label', type=str, default='autoencoder-train')
+    arg_parser.add_argument('--exp_label', type=str, default='latent-train')
     arg_parser.add_argument('--ray_nodes', type=int, default=4)
     arg_parser.add_argument('--l_rate', type=float, default=1e-1)
     arg_parser.add_argument('--l_rate_min', type=float, default=1e-3)
     arg_parser.add_argument('--l_rate_max_epoch', type=int, default=-1)
-    arg_parser.add_argument('--balance', type=float)
     arg_parser.add_argument('--freeze', action='store_true', default=False)
-    arg_parser.add_argument('--simple_transforms', action='store_true', default=False)
     arg_parser.add_argument('--predict', action='store_true', default=False)
 
     # add trainer arguments (gpus=x, precision=...)

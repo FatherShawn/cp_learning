@@ -33,6 +33,7 @@ class QuackLatentClassifier(pl.LightningModule):
            Passed to the parent constructor.
        """
         super().__init__(*args, **kwargs)
+        self.__to_probability = nn.Sigmoid()
         self.__learning_rate_init = learning_rate
         self.__learning_rate_min = learning_rate_min
         self.__lr_max_epochs = lr_max_epochs
@@ -48,13 +49,9 @@ class QuackLatentClassifier(pl.LightningModule):
             nn.LeakyReLU(leak_rate),
             nn.Linear(initial_size // 4, initial_size // 8),
             nn.LeakyReLU(leak_rate),
-            nn.Linear(initial_size // 8, initial_size // 1),
-            nn.Sigmoid()
+            nn.Linear(initial_size // 8, initial_size // 1)
         )
-        # We have 653481 uncensored (negative samples) and 215016 positive samples in our dataset.
-        # 653481 / 215016 = 3.0392203371
-        balance_factor = pt.tensor(3.039)
-        self.__loss_module = nn.BCEWithLogitsLoss(pos_weight=balance_factor)
+        self.__loss_module = nn.BCEWithLogitsLoss()
 
     def forward(self, x: pt.Tensor) -> pt.Tensor:
         """
@@ -94,9 +91,10 @@ class QuackLatentClassifier(pl.LightningModule):
         """
         values, labels = data
         prediction = self.forward(values)  # Shape (B, 1)
-        prediction = prediction.squeeze(dim=1)  # Shape (B)
+        loss = self.__loss_module(prediction, labels)
+        # Binarize predictions to 0 and 1.
+        prediction = self.__to_probability(prediction)
         prediction_labels = prediction.ge(0.5).long()
-        loss = self.__loss_module(prediction_labels, labels)
         log_interval_option = None if step_id == 'train' else True
         log_sync = False if step_id == 'train' else True
         self.log(f"{step_id}_loss", loss, on_step=log_interval_option, sync_dist=log_sync)
@@ -184,7 +182,7 @@ class QuackLatentClassifier(pl.LightningModule):
     def predict_step(self, batch: Tuple[pt.Tensor, List[dict]], batch_idx: int, dataloader_idx: Optional[int] = None) -> \
     Tuple[List[dict], pt.Tensor]:
         """
-        Calls _common_step for step 'predict'.
+        Calls `forward` for prediction.
 
         Parameters
         ----------
@@ -201,7 +199,11 @@ class QuackLatentClassifier(pl.LightningModule):
             An tuple of the batch metadata dictionary and the associated output data
         """
         inputs, meta = batch
-        return meta, self.forward(inputs)
+        # Classifier outputs an un-normalized confidence score.
+        # Use sigmoid to transform to a probability.
+        confidence = self.forward(inputs)
+        output = self.__to_probability(confidence)
+        return meta, output
 
     def training_step_end(self, outputs: dict, *args, **kwargs):
         """

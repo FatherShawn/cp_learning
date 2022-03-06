@@ -294,7 +294,7 @@ class QuackDenseNet(pl.LightningModule):
 
     def predict_step(self, batch: Tuple[pt.Tensor, List[dict]], batch_idx: int, dataloader_idx: Optional[int] = None) -> Tuple[List[dict], pt.Tensor]:
         """
-        Calls _common_step for step 'predict'.
+        Calls `forward` for prediction.
 
         Parameters
         ----------
