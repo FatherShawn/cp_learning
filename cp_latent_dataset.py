@@ -152,8 +152,7 @@ class QuackLatentDataset(Dataset):
         segment_1 = index // 100000
         remainder = index - (segment_1 * 100000)
         segment_2 = remainder // 1000
-        stem = f'/{segment_1}/{segment_2}/{index}/{index}.pyc'
-        return Path(f'{self.__path}/{stem}')
+        return Path(f'{self.__path}/{segment_1}/{segment_2}/{index}.pyc')
 
     def censored(self) -> int:
         """
