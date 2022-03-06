@@ -141,6 +141,7 @@ def main(args: Namespace) -> None:
         trainer = Trainer.from_argparse_args(
             args,
             logger=comet_logger,
+            strategy=ray_plugin,
             callbacks=[early_stopping_callback, checkpoint_callback, device_logger, lr_monitor],
             weights_save_path=checkpoint_storage
         )
