@@ -86,9 +86,7 @@ def main(args: Namespace) -> None:
     if args.checkpoint_path is not None:
         model = QuackLatentClassifier.load_from_checkpoint(
             args.checkpoint_path,
-            learning_rate=args.l_rate,
-            learning_rate_min=args.l_rate_min,
-            lr_max_epochs=args.l_rate_max_epoch
+            initial_size=256,
         )
     ray_plugin = RayPlugin(
         num_workers=args.ray_nodes,

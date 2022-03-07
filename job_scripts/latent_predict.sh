@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="densenetPredict"
+#SBATCH --job-name="latentPredict"
 #SBATCH --partition production
 #SBATCH --nodes=8
 #SBATCH --ntasks=64
@@ -72,15 +72,14 @@ done
 # change to the working directory
 cd $SLURM_WORKDIR
 
-echo ">>>> Begin densenetPredict"
+echo ">>>> Begin latentPredict"
 
-python $(pwd)/cp_learning/dn_processor.py  --exp_label "densenet predict" \
---data_dir $(pwd)/unknown_images \
+python $(pwd)/cp_learning/latent_processor.py  --exp_label "latent predict" \
+--data_dir $(pwd)/unknown_encoded/ \
 --predict \
 --accelerator cpu \
 --batch_size 8 \
 --ray_nodes 8 \
 --num_workers 6 \
---storage_path $(pwd)/latent_debug \
---checkpoint_path $(pwd)/archived-checkpoints/latent_checkpoint-step--122667-val_loss--0.05.ckpt \
---limit_predict_batches 1
+--storage_path $(pwd)/latent_prediction \
+--checkpoint_path $(pwd)/archived-checkpoints/latent_checkpoint-step--122667-val_loss--0.05.ckpt

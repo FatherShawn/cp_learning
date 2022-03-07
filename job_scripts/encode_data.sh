@@ -75,7 +75,7 @@ cd $SLURM_WORKDIR
 
 echo ">>>> Begin dataEncoder"
 
-python $(pwd)/cp_learning/ae_processor.py  --encode --filtered \
+python $(pwd)/cp_learning/ae_processor.py  --encode --evaluate \
 --data_dir $(pwd)/pickled \
 --storage_path $(pwd)/encoded \
 --accelerator cpu \

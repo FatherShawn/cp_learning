@@ -2,6 +2,7 @@
 A helper cli tool for checking files in densnet predictions.
 """
 from typing import Iterator
+from datetime import datetime
 from argparse import ArgumentParser, Namespace
 import json
 from pathlib import Path
@@ -26,6 +27,7 @@ def main(args: Namespace):
     void
     """
     count = 0
+    dates = set()
     storage = Path(args.storage_path)
     files = storage.glob('**/*.json')
     candidates = dict()
@@ -33,32 +35,35 @@ def main(args: Namespace):
         with json_file.open('r') as source:
             item = json.load(source)
         candidates[item['timestamp']] = item
+        dates.add(datetime.fromtimestamp(item['timestamp']).date().isoformat())
         count += 1
-    urls = [
-        args.source_path
-    ]
-    dataset = CensoredPlanetFlatten(
-        urls=urls,
-        compare=True,
-        labeled=False,
-        anomalies=True,
-        raw=True)
-    found = 0
-    dataset: Iterator[Row]
-    for item in dataset:
-        try:
-            if candidates[item['start_time']]['ip'] == item['ip'] and candidates[item['start_time']]['domain'] == item['domain']:
-                candidates[item['start_time']]['row'] = item
-                found += 1
-        except KeyError:
-            continue
-        if found >= count:
-            # No need to sift through the rest of the data.
-            break
-    candidates_storage = storage.joinpath('candidates.json')
-    with candidates_storage.open('w') as target:
-        json.dump(candidates, target)
-    print(f'Found {count} candidates and wrote {found} augmented candidates to {candidates_storage}')
+    print(dates)
+    print(count)
+    # urls = [
+    #     args.source_path
+    # ]
+    # dataset = CensoredPlanetFlatten(
+    #     urls=urls,
+    #     compare=True,
+    #     labeled=False,
+    #     anomalies=True,
+    #     raw=True)
+    # found = 0
+    # dataset: Iterator[Row]
+    # for item in dataset:
+    #     try:
+    #         if candidates[item['start_time']]['ip'] == item['ip'] and candidates[item['start_time']]['domain'] == item['domain']:
+    #             candidates[item['start_time']]['row'] = item
+    #             found += 1
+    #     except KeyError:
+    #         continue
+    #     if found >= count:
+    #         # No need to sift through the rest of the data.
+    #         break
+    # candidates_storage = storage.joinpath('candidates.json')
+    # with candidates_storage.open('w') as target:
+    #     json.dump(candidates, target)
+    # print(f'Found {count} candidates and wrote {found} augmented candidates to {candidates_storage}')
 
 
 if __name__ == '__main__':
