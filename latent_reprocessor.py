@@ -21,12 +21,6 @@ def main() -> None:
          `--storage_path`
             *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
 
-    **Optional** arguments are:
-         `--start`
-            *int* The starting index in the QuackIterableDataset.
-         `--end`
-            *int* The ending index in the QuackIterableDataset.
-
     Returns
     -------
     void
