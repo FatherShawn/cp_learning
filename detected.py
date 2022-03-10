@@ -12,7 +12,7 @@ from cp_flatten import CensoredPlanetFlatten, Row
 
 def main(args: Namespace):
     """
-    Processes possible censorship instances by matching stored metadata with original rows.
+    Processes possible censorship instances by matching stored metadata with original rows and sorting into types.
 
     Parameters
     ----------
