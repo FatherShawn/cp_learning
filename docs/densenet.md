@@ -3,6 +3,33 @@
 The densenet model with classes composed into the densenet class.
 
 
+### _class_ densenet.CensoredDataWriter(write_interval: str = 'batch', storage_path: str = '~/data')
+Bases: `pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter`
+
+Extends pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter
+to store metadata for detected censorship.
+
+
+#### write_on_batch_end(trainer: pytorch_lightning.trainer.trainer.Trainer, pl_module: pytorch_lightning.core.lightning.LightningModule, prediction: Any, batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int, dataloader_idx: int)
+Logic to write the results of a single batch to files.
+
+
+* **Parameters**
+
+    **class.** (*Parameter signature defined in the parent*) – 
+
+
+
+* **Return type**
+
+    void
+
+
+
+#### write_on_epoch_end(trainer: pytorch_lightning.trainer.trainer.Trainer, pl_module: pytorch_lightning.core.lightning.LightningModule, predictions: Sequence[Any], batch_indices: Optional[Sequence[Any]])
+Implementation expected by the base class.  Unused in our case.
+
+
 ### _class_ densenet.QuackDenseNet(learning_rate: float = 0.1, learning_rate_min: float = 0.0001, lr_max_epochs: int = - 1, freeze: bool = True, \*args: Any, \*\*kwargs: Any)
 Bases: `pytorch_lightning.core.lightning.LightningModule`
 
@@ -37,6 +64,8 @@ Configures the optimizer and learning rate scheduler objects.
 
 
 #### forward(x: torch.Tensor)
+Process a batch of input through the model.
+
 
 * **Parameters**
 
@@ -50,7 +79,7 @@ Configures the optimizer and learning rate scheduler objects.
 
 * **Returns**
 
-    The output, which should be (B, 1) sized, of single probability floats.
+    The output, which should be (B, 1) sized, of confidence score floats.
 
 
 
@@ -60,14 +89,14 @@ Configures the optimizer and learning rate scheduler objects.
 
 
 
-#### predict_step(batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None)
-Calls _common_step for step ‘predict’.
+#### predict_step(batch: Tuple[torch.Tensor, List[dict]], batch_idx: int, dataloader_idx: Optional[int] = None)
+Calls forward for prediction.
 
 
 * **Parameters**
 
     
-    * **batch** (*pt. Tuple**[**dict**, **pt.Tensor**]*) – An tuple of a metadata dictionary and the associated input data
+    * **batch** (*Tuple**[**pt.Tensor**, **List**[**dict**]**]*) – An tuple of a metadata dictionary and the associated input data
 
 
     * **batch_idx** (*int*) – The index of the batch.  Required to match the parent signature.  Unused in our model.
@@ -89,6 +118,26 @@ Calls _common_step for step ‘predict’.
 
 
 
+#### set_balanced_loss(balance: float)
+Using the balance factor passed, even the loss.
+
+
+* **Parameters**
+
+    **balance** (*float*) – The proportion of negative samples / positive samples.
+
+
+
+* **Return type**
+
+    void
+
+
+### References
+
+[https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss#bcewithlogitsloss](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html?highlight=bceloss#bcewithlogitsloss)
+
+
 #### test_epoch_end(outputs: List[Union[torch.Tensor, Dict[str, Any]]])
 Called at the end of a test epoch with the output of all test steps.
 
@@ -107,14 +156,14 @@ Now that all the test steps are complete, we compute the metrics.
 
 
 
-#### test_step(x: torch.Tensor, batch_index: int)
+#### test_step(x: Tuple[torch.Tensor, torch.Tensor], batch_index: int)
 Calls _common_step for step ‘test’.
 
 
 * **Parameters**
 
     
-    * **x** (*pt. Tensor*) – An input tensor
+    * **x** (*Tuple**[**pt.Tensor**, **pt.Tensor**]*) – The input tensor and a label tensor
 
 
     * **batch_index** (*int*) – The index of the batch.  Required to match the parent signature.  Unused in our model.
@@ -173,14 +222,14 @@ When using distributed backends, only a portion of the batch is inside the test_
 
 #### training(_: boo_ )
 
-#### training_step(x: torch.Tensor, batch_index: int)
+#### training_step(x: Tuple[torch.Tensor, torch.Tensor], batch_index: int)
 Calls _common_step for step ‘train’.
 
 
 * **Parameters**
 
     
-    * **x** (*pt. Tensor*) – An input tensor
+    * **x** (*Tuple**[**pt.Tensor**, **pt.Tensor**]*) – The input tensor and a label tensor
 
 
     * **batch_index** (*int*) – The index of the batch.  Required to match the parent signature.  Unused in our model.
@@ -254,14 +303,14 @@ Now that all the validation steps are complete, we compute the metrics.
 
 
 
-#### validation_step(x: torch.Tensor, batch_index: int)
+#### validation_step(x: Tuple[torch.Tensor, torch.Tensor], batch_index: int)
 Calls _common_step for step ‘val’.
 
 
 * **Parameters**
 
     
-    * **x** (*pt. Tensor*) – An input tensor
+    * **x** (*Tuple**[**pt.Tensor**, **pt.Tensor**]*) – The input tensor and a label tensor
 
 
     * **batch_index** (*int*) – The index of the batch.  Required to match the parent signature.  Unused in our model.

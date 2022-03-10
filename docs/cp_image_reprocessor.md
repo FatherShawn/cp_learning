@@ -8,29 +8,31 @@ The reprocessing logic.
 
 **Required** arguments are:
 
-> > –source_path
+> –source_path
 
-> >     *str* **Required** The path to top dir of the QuackIterableDataset.
+>     *str* **Required** The path to top dir of the QuackIterableDataset.
 
-> > –storage_path
+> –storage_path
 
-> >     *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
+>     *str* **Required** The top directory of the data storage tree for the QuackImageDataset.
 
-> \` –filtered\`
+**Optional** arguments are:
 
->     > *bool* Flag to only include censored and uncensored data.
+    \` –filtered\`
 
->     –undetermined
+        > *bool* Flag to only include censored and uncensored data.
 
->         *bool* Flat to include only undetermined data
+        –undetermined
 
->     –start
+            *bool* Flag to include only undetermined data
 
->         *int* The starting index in the QuackIterableDataset.
+        –start
 
->     –end
+            *int* The starting index in the QuackIterableDataset.
 
->         *int* The ending index in the QuackIterableDataset.
+        –end
+
+            *int* The ending index in the QuackIterableDataset.
 
 
 * **Return type**

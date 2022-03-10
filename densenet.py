@@ -343,7 +343,7 @@ class QuackDenseNet(pl.LightningModule):
     def validation_step_end(self, outputs: dict, *args, **kwargs):
         """
         When using distributed backends, only a portion of the batch is inside the `validation_step`.
-         We calculate metrics here with the entire batch.
+        We calculate metrics here with the entire batch.
 
         Parameters
         ----------
@@ -364,7 +364,7 @@ class QuackDenseNet(pl.LightningModule):
     def test_step_end(self, outputs: dict, *args, **kwargs):
         """
         When using distributed backends, only a portion of the batch is inside the `test_step`.
-         We calculate metrics here with the entire batch.
+        We calculate metrics here with the entire batch.
 
         Parameters
         ----------

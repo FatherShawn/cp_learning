@@ -81,10 +81,10 @@ rac{h^T_t cdot c}{sqrt{H}}\`
 
 #### training(_: boo_ )
 
-### _class_ autoencoder.AutoencoderWriter(write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False)
+### _class_ autoencoder.AutoencoderWriter(write_interval: str = 'batch', storage_path: str = '~/data', filtered: bool = False, evaluate: bool = False, reduction_threshold: float = 1.0)
 Bases: `pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter`
 
-Extends prediction writer to store encoded Quack data.
+Extends pytorch_lightning.callbacks.prediction_writer.BasePredictionWriter to store encoded Quack data.
 
 
 #### write_on_batch_end(trainer: pytorch_lightning.trainer.trainer.Trainer, pl_module: pytorch_lightning.core.lightning.LightningModule, prediction: Any, batch_indices: Optional[Sequence[int]], batch: Any, batch_idx: int, dataloader_idx: int)
@@ -104,19 +104,9 @@ Logic to write the results of a single batch to files.
 
 
 #### write_on_epoch_end(trainer: pytorch_lightning.trainer.trainer.Trainer, pl_module: pytorch_lightning.core.lightning.LightningModule, predictions: Sequence[Any], batch_indices: Optional[Sequence[Any]])
-Logic to write the metadata for the data processed to file.
-
-
-* **Parameters**
-
-    **class.** (*Parameter signature defined in the parent*) – 
-
-
-
-* **Return type**
-
-    void
-
+This class runs on every distributed node and aggregation is not practical due to the size of our dataset.  We
+do not save the predictions after the batch to avoid running out of memory. Method is required but therefore
+nothing to do here.
 
 
 ### _class_ autoencoder.QuackAutoEncoder(num_embeddings: int, embed_size: int, hidden_size: int, layers: int = 1, max_decode_length: Optional[int] = None, learning_rate: float = 0.1, learning_rate_min: float = 0.0001, lr_max_epochs: int = - 1, \*args: Any, \*\*kwargs: Any)

@@ -5,8 +5,6 @@
 Bases: `pytorch_lightning.core.datamodule.LightningDataModule`
 
 
-#### get_width()
-
 #### predict_dataloader()
 Implement one or multiple PyTorch DataLoaders for prediction.
 

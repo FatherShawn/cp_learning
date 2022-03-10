@@ -111,6 +111,13 @@ class QuackImageDataModule(pl.LightningDataModule):
         print(f'Validation dataset randomly split with {len(self.__val_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        Constructs and returns the training dataloader using an QuackImageTransformer object configured for training.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         transform_strategy = 'simple' if self.__simple_transforms else 'randomize'
         train_collate = QuackImageTransformer(step='train', strategy=transform_strategy)
         return DataLoader(
@@ -123,6 +130,13 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the testing dataloader using an QuackImageTransformer object configured for testing.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         test_collate = QuackImageTransformer(step='test', strategy='simple')
         return DataLoader(
             self.__test_data,
@@ -133,6 +147,14 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the validation dataloader using
+        an QuackImageTransformer object configured for validation.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         val_collate = QuackImageTransformer(step='val', strategy='simple')
         return DataLoader(
             self.__val_data,
@@ -143,6 +165,14 @@ class QuackImageDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the prediction dataloader using
+        an QuackImageTransformer object configured for prediction.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         predict_collate = QuackImageTransformer(step='predict', strategy='simple')
         return DataLoader(
             self.__predict_data,

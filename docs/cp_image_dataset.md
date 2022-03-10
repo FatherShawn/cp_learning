@@ -61,7 +61,7 @@ censored
 
     1 if censored, -1 if uncensored, 0 as default (undetermined)
 
-Each QuackImageData stores one numpy arrays:
+Each QuackImageData stores one numpy array:
 
 pixels
 
@@ -70,16 +70,6 @@ pixels
 
 #### censored()
 Getter for the value of self.__censored.
-
-
-* **Return type**
-
-    int
-
-
-
-#### data_width()
-Getter for the value of self.__max_width.
 
 
 * **Return type**

@@ -3,7 +3,7 @@
 CensoredPlanetFlatten and helper classes to flatten raw Censored Planet data.
 
 
-### _class_ cp_flatten.CensoredPlanetFlatten(urls: Union[str, List[str]], vocab_path: str, compare: bool = False, labeled: bool = False, anomalies: bool = False)
+### _class_ cp_flatten.CensoredPlanetFlatten(urls: Union[str, List[str]], vocab_path: str = '', compare: bool = False, labeled: bool = False, anomalies: bool = False, raw: bool = False)
 Bases: `torch.utils.data.dataset.IterableDataset`, `webdataset.dataset.Shorthands`
 
 Although (Webdataset)[[https://webdataset.github.io/webdataset/](https://webdataset.github.io/webdataset/)] may be able to handle all our pipeline needs,
@@ -19,22 +19,6 @@ The following are adapted from [https://github.com/censoredplanet/censoredplanet
 
 
 * extract_domain_from_sent_field
-
-
-* **Parameters**
-
-    
-    * **self.__shards** (*ShardList*) – The dataset to use a pipeline source.
-
-
-    * **self.__blockpage_matcher** ([*BlockpageMatcher*](blockpage.md#blockpage.BlockpageMatcher)) – The blockpage matching utility.
-
-
-    * **self.__labeled** (*bool*) – Should the data be labeled as censored?
-
-
-    * **self.__xlmr** (*object*) – The XLMR pretrained tokenizer.
-
 
 
 #### reinforce_type(expected_type)

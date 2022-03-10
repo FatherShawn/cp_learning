@@ -19,7 +19,7 @@ For the training loop:
 Then using these objects, instantiates a training control object using pytorch_lightning.trainer.trainer.Trainer
 
 For inference with a trained model, just the logger and the ray strategy are used along with an instance of
-densenet.DensenetWriter which when composed with Trainer prepares the prediction loop to output its results
+densenet.CensoredDataWriter which when composed with Trainer prepares the prediction loop to output its results
 to file on each iteration.
 
 
