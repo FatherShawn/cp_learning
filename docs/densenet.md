@@ -197,8 +197,7 @@ Calls _common_step for step ‘test’.
 
 #### test_step_end(outputs: dict, \*args, \*\*kwargs)
 When using distributed backends, only a portion of the batch is inside the test_step.
-
-    We calculate metrics here with the entire batch.
+We calculate metrics here with the entire batch.
 
 
 * **Parameters**
@@ -344,8 +343,7 @@ Calls _common_step for step ‘val’.
 
 #### validation_step_end(outputs: dict, \*args, \*\*kwargs)
 When using distributed backends, only a portion of the batch is inside the validation_step.
-
-    We calculate metrics here with the entire batch.
+We calculate metrics here with the entire batch.
 
 
 * **Parameters**
