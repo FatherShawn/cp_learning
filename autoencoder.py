@@ -379,14 +379,14 @@ class QuackAutoEncoder(pl.LightningModule):
 
     def _common_step(self, x: pt.Tensor, batch_index: int, step_id: str) -> float:
         """
-        The common step containds the decoder logic, and begins by calling self.forward() so that it executes the full
-        autoencder cycle.
+        The common step contains the decoder logic, and begins by calling self.forward() so that it executes the full
+        autoencoder cycle.
 
         Parameters
         ----------
         x: pt.Tensor
             The input, which should be (B, T) shaped.
-       batch_index: int
+        batch_index: int
             The batch index
         step_id: str
             The step id.

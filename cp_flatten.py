@@ -517,11 +517,11 @@ class CensoredPlanetFlatten(IterableDataset, Shorthands):
         Parameters
         ----------
         sent: str
+            Examples:
 
-            "" meaning the sent packet wasn't recorded.
-            "GET / HTTP/1.1\r\nHost: example5718349450314.com\r\n" (echo/discard)
-            "GET www.bbc.co.uk HTTP/1.1\r\nHost: /content.html\r\n" (discard error)
-            or just "www.apple.com" (HTTP/S)
+            * An empty string ("") meaning the sent packet wasn't recorded.
+            * "GET / HTTP/1.1\r\nHost: example5718349450314.com\r\n" (echo/discard)
+            * "GET www.bbc.co.uk HTTP/1.1\r\nHost: /content.html\r\n" (discard error) or just "www.apple.com" (HTTP/S)
 
         Returns
         -------
