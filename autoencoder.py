@@ -164,11 +164,7 @@ class AttentionScore(nn.Module):
 
     def forward(self, states: pt.Tensor, context: pt.Tensor) -> pt.Tensor:
         """
-        Computes the dot-product score:
-
-        :math`score(h_t, c) = \frac{h^T_t \cdot c}{\sqrt{H}}`
-        with values of h taken from the states parameter, c from the context paramter and H is the dim parameter
-        passed at construction.
+        Computes the dot-product score.
 
         Parameters
         ----------
@@ -382,6 +378,24 @@ class QuackAutoEncoder(pl.LightningModule):
         return last_h, encoded_sequence
 
     def _common_step(self, x: pt.Tensor, batch_index: int, step_id: str) -> float:
+        """
+        The common step containds the decoder logic, and begins by calling self.forward() so that it executes the full
+        autoencder cycle.
+
+        Parameters
+        ----------
+        x: pt.Tensor
+            The input, which should be (B, T) shaped.
+       batch_index: int
+            The batch index
+        step_id: str
+            The step id.
+
+        Returns
+        -------
+        float
+            The total loss over the sequence.
+        """
         final_state, sequence = self.forward(x)
 
         # Now add the decoder part.
@@ -492,9 +506,9 @@ class QuackAutoEncoder(pl.LightningModule):
 
         Parameters
         ----------
-       batch: pt. Tuple[dict, pt.Tensor]
+        batch: pt. Tuple[dict, pt.Tensor]
             An tuple of a metadata dictionary and the associated input data
-       batch_idx: int
+        batch_idx: int
             The index of the batch.  Required to match the parent signature.  Unused in our model.
         dataloader_idx: int
             Index of the current dataloader.   Required to match the parent signature.  Unused in our model.

@@ -47,13 +47,13 @@ def main() -> None:
 
     **Required** arguments are:
 
-         `--source_path`
+         --source_path
             *str*   The path to the .tar file.  May be local or a url. Passed to `CensoredPlanetFlatten`.
-        ` --storage_path`
+         --storage_path
             *str* The top directory of the data storage tree.
-         `--log_path`
+         --log_path
             *str* default=0 The path to a log file.
-         `--vocab_path`
+         --vocab_path
             *str* default=0 The path to a .pyc file.  Passed to `CensoredPlanetFlatten`.
     """
     # Add args to make a more flexible cli tool.
