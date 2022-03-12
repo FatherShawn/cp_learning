@@ -19,6 +19,10 @@ Adapted from:
 [https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/blockpage.py](https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/blockpage.py)
 
 
+#### \__init__()
+Create a Blockpage Matcher.
+
+
 #### match_page(page: str)
 Check if the input page matches a known blockpage or false positive.
 
@@ -52,3 +56,12 @@ Check if the input page matches a known blockpage or false positive.
 * **Return type**
 
     Tuple[Optional[bool], Optional[str]]
+
+
+
+#### \__dict__(_ = mappingproxy({'__module__': 'blockpage', '__doc__': '\\n  Matcher to confirm blockpages or false positives.\\n\\n  References\\n  ----------\\n  Adapted from:\\n  https://github.com/censoredplanet/censoredplanet-analysis/blob/master/pipeline/metadata/blockpage.py\\n  ', '__init__': <function BlockpageMatcher.__init__>, 'match_page': <function BlockpageMatcher.match_page>, '__dict__': <attribute '__dict__' of 'BlockpageMatcher' objects>, '__weakref__': <attribute '__weakref__' of 'BlockpageMatcher' objects>, '__annotations__': {}}_ )
+
+#### \__module__(_ = 'blockpage_ )
+
+#### \__weakref__()
+list of weak references to the object (if defined)

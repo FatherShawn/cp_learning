@@ -1,15 +1,15 @@
-# dn_processor module
+# latent_processor module
 
 A controller script for configuring and launching Pytorch Lightning’s Trainer for the
-Densenet model: densenet.QuackDenseNet().
+QuackLatentClassifier model: cp_latent_classifier.QuackLatentClassifier().
 
 
-### dn_processor.main(args: argparse.Namespace)
+### latent_processor.main(args: argparse.Namespace)
 The executable logic for this controller.
 
 For the training loop:
-- Instantiates a data object using `cp_image_data.QuackImageDataModule`.
-- Instantiates a model using `densenet.QuackDenseNet`.
+- Instantiates a data object using `cp_latent_data.QuackLatentDataModule`.
+- Instantiates a model using `cp_latent_classifier.QuackLatentClassifier`.
 - Instantiates a strategy plugin using `ray_lightning.ray_ddp.RayPlugin`.
 - Instantiates callback objects:
 

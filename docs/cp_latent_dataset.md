@@ -1,23 +1,23 @@
-# cp_image_dataset module
+# cp_latent_dataset module
 
-Defines a class and data structures for flattened quack data stored as images and pixel tensors.
+Defines a class and data structures for quack data en tensors.
 
 
-### _class_ cp_image_dataset.QuackImageData(\*args, \*\*kwargs)
+### _class_ cp_latent_dataset.QuackLatentData(\*args, \*\*kwargs)
 Bases: `dict`
 
-Flattened quack data and associated metadata.
+Encoded quack data and associated metadata.
 
 
 #### metadata(_: dic_ )
 
-#### pixels(_: numpy.ndarra_ )
+#### encoded(_: numpy.ndarra_ )
 
-#### \__annotations__(_ = {'metadata': <class 'dict'>, 'pixels': <class 'numpy.ndarray'>_ )
+#### \__annotations__(_ = {'encoded': <class 'numpy.ndarray'>, 'metadata': <class 'dict'>_ )
 
-#### \__dict__(_ = mappingproxy({'__module__': 'cp_image_dataset', '__annotations__': {'metadata': <class 'dict'>, 'pixels': <class 'numpy.ndarray'>}, '__doc__': '\\n    Flattened quack data and associated metadata.\\n    ', '__new__': <staticmethod object>, '__dict__': <attribute '__dict__' of 'QuackImageData' objects>, '__weakref__': <attribute '__weakref__' of 'QuackImageData' objects>, '__total__': True}_ )
+#### \__dict__(_ = mappingproxy({'__module__': 'cp_latent_dataset', '__annotations__': {'metadata': <class 'dict'>, 'encoded': <class 'numpy.ndarray'>}, '__doc__': '\\n    Encoded quack data and associated metadata.\\n    ', '__new__': <staticmethod object>, '__dict__': <attribute '__dict__' of 'QuackLatentData' objects>, '__weakref__': <attribute '__weakref__' of 'QuackLatentData' objects>, '__total__': True}_ )
 
-#### \__module__(_ = 'cp_image_dataset_ )
+#### \__module__(_ = 'cp_latent_dataset_ )
 
 #### _static_ \__new__(cls, /, \*args, \*\*kwargs)
 
@@ -27,10 +27,10 @@ Flattened quack data and associated metadata.
 list of weak references to the object (if defined)
 
 
-### _class_ cp_image_dataset.QuackImageDataset(path: str)
+### _class_ cp_latent_dataset.QuackLatentDataset(path: str)
 Bases: `torch.utils.data.dataset.Dataset`
 
-Iterates or selectively retrieves items from a collection of python pickle files which contain QuackImageData
+Iterates or selectively retrieves items from a collection of python pickle files which contain QuackLatentData
 
 Metadata stored in metadata.pyc:
 
@@ -75,7 +75,7 @@ censored
 
     1 if censored, -1 if uncensored, 0 as default (undetermined)
 
-Each QuackImageData stores one numpy array:
+Each QuackLatentData stores one numpy array:
 
 pixels
 
@@ -98,7 +98,7 @@ Iterates through all data points in the dataset.
 
 * **Return type**
 
-    QuackImageData
+    [QuackImageData](cp_image_dataset.md#cp_image_dataset.QuackImageData)
 
 
 
@@ -114,13 +114,13 @@ Implements a required method to access a single data point by index.
 
 * **Return type**
 
-    QuackImageData
+    [QuackImageData](cp_image_dataset.md#cp_image_dataset.QuackImageData)
 
 
 
 #### \__len__()
 
-#### \__module__(_ = 'cp_image_dataset_ )
+#### \__module__(_ = 'cp_latent_dataset_ )
 
 #### \__parameters__(_ = (_ )
 

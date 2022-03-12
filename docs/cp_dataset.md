@@ -60,6 +60,66 @@ variable_text
     Text data that has been encoded (tokenized) using the XLMR pretrained model.
 
 
+#### \__init__(path: str)
+Constructs the QuackIterableDataset object.
+
+
+* **Parameters**
+
+    **path** (*str*) – A path to the top level of the data directories.
+
+
+
+#### \__iter__()
+Iterates through all data points in the dataset.
+
+
+* **Return type**
+
+    Iterator[[TokenizedQuackData](cp_flatten.md#cp_flatten.TokenizedQuackData)]
+
+
+
+#### \__getitem__(index: int)
+> Implements a required method to access a single data point by index.
+
+
+* **Parameters**
+
+    **index** (*int*) – The index of the data item.
+
+
+
+* **Returns**
+
+    A dictionary (TypedDict) containing the data.
+
+
+
+* **Return type**
+
+    [TokenizedQuackData](cp_flatten.md#cp_flatten.TokenizedQuackData)
+
+
+
+#### \__len__()
+
+* **Returns**
+
+    The length of this dataset.
+
+
+
+* **Return type**
+
+    int
+
+
+
+#### \__module__(_ = 'cp_dataset_ )
+
+#### \__parameters__(_ = (_ )
+
 #### censored()
 Getter for the value of self.__censored.
 
@@ -70,8 +130,8 @@ Getter for the value of self.__censored.
 
 
 
-#### data_width()
-Getter for the value of self.__max_width.
+#### undetermined()
+Getter for the value of self.__undetermined.
 
 
 * **Return type**
@@ -90,8 +150,8 @@ Getter for the value of self.__uncensored.
 
 
 
-#### undetermined()
-Getter for the value of self.__undetermined.
+#### data_width()
+Getter for the value of self.__max_width.
 
 
 * **Return type**
