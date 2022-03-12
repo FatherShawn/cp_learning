@@ -21,7 +21,8 @@ def main(args: Namespace):
 
         --storage_path
             *str*  A path to the top directory of metadata files stored as JSON.
-        --
+        --source_path
+            *str*  A path to tar file of original Censored Planet data.
 
     Returns
     -------

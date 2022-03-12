@@ -87,6 +87,13 @@ class QuackLatentDataModule(pl.LightningDataModule):
         print(f'Prediction dataset ready with {len(self.__predict_data)} items.')
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        Constructs and returns the train dataloader using an ``QuackLatentCollator`` object configured for training.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         train_collate = QuackLatentCollator(step='train')
         return DataLoader(
             self.__train_data,
@@ -98,6 +105,13 @@ class QuackLatentDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the test dataloader using an ``QuackLatentCollator`` object configured for testing.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         test_collate = QuackLatentCollator(step='test')
         return DataLoader(
             self.__test_data,
@@ -108,6 +122,14 @@ class QuackLatentDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the validation dataloader using an ``QuackLatentCollator`` object
+        configured for validation.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         val_collate = QuackLatentCollator(step='val')
         return DataLoader(
             self.__val_data,
@@ -118,6 +140,14 @@ class QuackLatentDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Constructs and returns the prediction dataloader using an ``QuackLatentCollator`` object configured
+        for prediction.
+
+        Returns
+        -------
+        torch.utils.data.dataloader.DataLoader
+        """
         predict_collate = QuackLatentCollator(step='predict')
         return DataLoader(
             self.__predict_data,
