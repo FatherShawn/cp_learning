@@ -16,7 +16,7 @@ that can easily be swapped in your instance of this code.
 
 ### Building Datasets
 
-The Censored Planet data needs to be transformed into datasets that can be used with our models. I built my base dataset
+The [Censored Planet](https://censoredplanet.org) data needs to be transformed into datasets that can be used with our models. I built my base dataset
 by ingesting one large `CP_Quack-echo-YYYY-MM-DD-HH-MM-SS.tar` file at a time to accommodate the speed and stability of
 my computing environment.
 
