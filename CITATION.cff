@@ -1,0 +1,33 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Censored Planet Processes and Models for Machine Learning
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Shawn
+    family-names: Duncan
+    email: github@sd.shawnduncan.org
+    orcid: 'https://orcid.org/0000-0002-4604-4354'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.7653539
+    description: Zendo archive of GitHub releases
+repository-code: 'https://github.com/FatherShawn/cp_learning'
+abstract: >
+  This repository contains the code written to support the
+  research for my thesis "Finding Latent Features in
+  Internet Censorship Data." The thesis was further refined
+  and subsequently published as "Detecting Network-based
+  Internet Censorship via Latent Feature Representation
+  Learning" and a preprint is available at arxiv.org
+keywords:
+  - machine-learning
+  - censorship
+  - network-measurement
+license: GPL-3.0
+version: 1.0.0
+date-released: '2023-02-18'

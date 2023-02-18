@@ -1,5 +1,8 @@
 # Censored Planet Processes and Models for Machine Learning
 
+[![DOI](https://zenodo.org/badge/350322909.svg)](https://zenodo.org/badge/latestdoi/350322909)
+
+
 ## Overview
 This repository contains the code written to support the research for my thesis 
 _Finding Latent Features in Internet Censorship Data_. The thesis was further refined and subsequently
