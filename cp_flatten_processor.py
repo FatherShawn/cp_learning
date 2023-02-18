@@ -67,9 +67,8 @@ def main() -> None:
     urls = [
         args.source_path
     ]
+    # Initiate an iterable dataset for the source.
     dataset = CensoredPlanetFlatten(urls, args.vocab_path, True, False, True)
-    count = 0
-    variable_census = {}
 
     try:
         with open(args.storage_path + '/metadata.pyc', 'rb') as retrieved_dict:
@@ -89,8 +88,6 @@ def main() -> None:
         # Validate:
         meta = item['metadata']
         verify_returned_item(item)
-        # Create response group
-        index = str(count)
         # Ensure storage is ready.
         storage_path = Path(args.storage_path + filepath(count, dir_only=True))
         storage_path.mkdir(parents=True, exist_ok=True)
@@ -105,8 +102,6 @@ def main() -> None:
         width = item['static_size'].size + item['variable_text'].size
         if width > metadata['max_width']:
             metadata['max_width'] = width
-        # Store as verified:
-        verified = False
         with item_storage.open(mode='wb') as target:
             pickle.dump(item, target)
         try:
@@ -115,6 +110,8 @@ def main() -> None:
             verify_returned_item(check)
         except Exception:
             # Don't sweat a single failure among 100s of thousands of items.
+            # Simply continue without updating the count and overwrite the failed item
+            # in the next iteration.
             continue
         count += 1
         if count % 100000 == 0:
