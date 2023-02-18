@@ -20,16 +20,19 @@ The Censored Planet data needs to be transformed into datasets that can be used 
 by ingesting one large `CP_Quack-echo-YYYY-MM-DD-HH-MM-SS.tar` file at a time to accommodate the speed and stability of
 my computing environment.
 
+```mermaid
 flowchart TD
     A[/Quack tar file/] -->B(cp_flatten_processor.py)
     B --> C[/Pickled Dictionary<br>Stored at indexed path/]
     C -- iterate --> B
     B --> D[/Create or update<br>metadata.pyc/]
     D --> E(Single tar file processed)
+```
 
 The flattened and vectorized data is stored as pickled dictionaries using an indexed directory structure under the
 specified output directory
 
+```mermaid
 flowchart TD
     A[Dataset dir] --- 0
     A --- 1
@@ -47,6 +50,7 @@ flowchart TD
     2-2 --- 222[/202002.pyc/]
     2-2 --- 22c[/.../]
     2-2 --- 229[/202999.pyc/]
+```
 
 These dictionary files are used in the remainder of the project via `QuackIterableDataset` found in
 `cp_dataset.py`.  This iterable dataset is managed using `QuackTokenizedDataModule`.
@@ -60,22 +64,26 @@ training the replacement classifier layer in DenseNet.  The second set are all t
 
 The flattened and tokenized data is used to train the autoencoder
 
+```mermaid
 flowchart TD
     A[QuackIterableDataset] --> B[QuackTokenizedDataModule]
     B --> C(ae_processor.py)
     C --iterate--> B
     C --> D[trained QuackAutoEncoder]
+```
 
 The trained autoencoder model is captured and used as in additional input to `ae_processor.py` to process the data
 into two sets of embeddings.  One set is labeled and balanced between censored and uncensored for training the
 classifier. The second set are embeddings of the _undetermined_ records.
 
+```mermaid
 flowchart TD
     J[/trained QuackAutoEncoder/] --> M
     K[QuackIterableDataset] --> L[QuackTokenizedDataModule]
     L --> M
     M(ae_processor.py) --> N[AutoencoderWriter]
     N --> O[/.pyc file in indexed directory/]
+```
 
 These two datasets of embeddings are managed with `QuackLatentDataModule`.
 
