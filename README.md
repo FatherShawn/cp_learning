@@ -18,7 +18,8 @@ that can easily be swapped in your instance of this code.
 
 The [Censored Planet](https://censoredplanet.org) data needs to be transformed into datasets that can be used with our models. I built my base dataset
 by ingesting one large `CP_Quack-echo-YYYY-MM-DD-HH-MM-SS.tar` file at a time to accommodate the speed and stability of
-my computing environment.
+my computing environment. My data was taken from 5 days in the summer of 2021. I believe that the structure of their
+data as since changed so you likely will need to refactor `cp_flatten.py` if you are using newer data.
 
 ```mermaid
 flowchart TD
