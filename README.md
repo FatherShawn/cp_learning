@@ -88,6 +88,14 @@ flowchart TD
 
 These two datasets of embeddings are managed with `QuackLatentDataModule`.
 
+## Classification
+
+Classification as _censored_ or _uncensored_ is the core task of this work.  There are two classification processes
+built in this repository.  `latent_processor.py` both trains a `QuackLatentClassifier` using a set of labeled embeddings
+and uses a trained `QuackLatentClassifier` to classify _undetermined_ embedding as either _censored_ or _uncensored_.
+`dn_processor.py` both trains a `QuackDenseNet` using a labeled set of image data and then uses the trained
+`QuackDenseNet` to classify _undetermined_ image data as either _censored_ or _uncensored_.
+
 ## Job Scripts
 
 Our data processed in the [CUNY HPCC](https://www.csi.cuny.edu/academics-and-research/research-centers/cuny-high-performance-computing-center)
